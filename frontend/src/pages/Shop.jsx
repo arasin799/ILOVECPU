@@ -2,31 +2,37 @@ import { useEffect, useMemo, useState } from "react";
 import HomeHeader from "../components/home/HomeHeader";
 import BannerSection from "../components/home/BannerSection";
 import ProductSection from "../components/home/ProductSection";
-import HomeFooter from "../components/home/HomeFooter";
-import "../styles/home.css";
-import { API_BASE } from "../config";
 import HorizontalProductSection from "../components/home/HorizontalProductSection";
+import HomeFooter from "../components/home/HomeFooter";
+import { API_BASE } from "../config";
+import "../styles/home.css";
 
-const notebookBrands = ["ACER", "ASUS", "GIGABYTE", "LENOVO", "MSI", "HP"];
-const cpuCategories = [
-  "ซีพียู",
-  "เมนบอร์ด",
-  "การ์ดจอ",
-  "แรม",
-  "พาวเวอร์ซัพพลาย",
-  "คีย์บอร์ด",
-  "จอมอนิเตอร์",
-  "อุปกรณ์เสริม",
-  "ชุดระบายความร้อน",
+const notebookBrands = [
+  { label: "ACER", mark: "acer", className: "brand-acer" },
+  { label: "ASUS", mark: "ASUS", className: "brand-asus" },
+  { label: "GIGABYTE", mark: "GIGABYTE", className: "brand-gigabyte" },
+  { label: "LENOVO", mark: "Lenovo", className: "brand-lenovo" },
+  { label: "MSI", mark: "msi", className: "brand-msi" },
+  { label: "HP", mark: "hp", className: "brand-hp" },
 ];
 
+const cpuCategories = [
+  { label: "ซีพียู", mark: "CPU" },
+  { label: "เมนบอร์ด", mark: "MB" },
+  { label: "การ์ดจอ", mark: "GPU" },
+  { label: "แรม", mark: "RAM" },
+  { label: "พาวเวอร์ซัพพลาย", mark: "PSU" },
+  { label: "คีย์บอร์ด", mark: "KB" },
+  { label: "จอมอนิเตอร์", mark: "MON" },
+  { label: "อุปกรณ์เสริม", mark: "ACC" },
+  { label: "ชุดระบายความร้อน", mark: "COOL" },
+];
 
 export default function Shop({ cart, setCart }) {
   const [products, setProducts] = useState([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  
 
   async function loadProducts(query = "") {
     setLoading(true);
@@ -56,7 +62,6 @@ export default function Shop({ cart, setCart }) {
   function addToCart(p) {
     setCart((prev) => {
       const idx = prev.findIndex((x) => x.productId === p.id);
-
       if (idx >= 0) {
         const next = [...prev];
         next[idx] = {
@@ -67,7 +72,6 @@ export default function Shop({ cart, setCart }) {
         };
         return next;
       }
-
       return [...prev, { productId: p.id, qty: 1, price: p.price, name: p.name }];
     });
   }
@@ -76,28 +80,22 @@ export default function Shop({ cart, setCart }) {
     return products.filter((p) => p.category === "NOTEBOOK");
   }, [products]);
 
+  const acerNotebookProducts = useMemo(() => {
+    return notebookProducts.filter((p) => (p.brand || "").toUpperCase() === "ACER").slice(0, 6);
+  }, [notebookProducts]);
+
   const cpuProducts = useMemo(() => {
-    return products.filter((p) => p.category === "CPU");
+    return products.filter((p) => p.category === "CPU").slice(0, 6);
   }, [products]);
 
   const accessoryProducts = useMemo(() => {
-    return products.filter((p) => p.category === "ACCESSORY");
+    return products.filter((p) => p.category === "ACCESSORY").slice(0, 4);
   }, [products]);
 
-  const showNotebook = notebookProducts.length
-    ? notebookProducts.slice(0, 6)
-    : products.slice(0, 6);
-
-  const showCpu = cpuProducts.length
-    ? cpuProducts.slice(0, 6)
-    : products.slice(0, 6);
-
   const latestProducts = products.slice(0, 4);
-
-  const showAccessory = accessoryProducts.length
-    ? accessoryProducts.slice(0, 4)
-    : products.slice(0, 4);
-
+  const showNotebook = acerNotebookProducts.length ? acerNotebookProducts : notebookProducts.slice(0, 6);
+  const showCpu = cpuProducts.length ? cpuProducts : products.slice(0, 6);
+  const showAccessory = accessoryProducts.length ? accessoryProducts : products.slice(0, 4);
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
 
   return (
@@ -117,11 +115,12 @@ export default function Shop({ cart, setCart }) {
       {!loading && !error && (
         <>
           <ProductSection
-            title="โน้ตบุ๊ค"
-            sidebarTitle="โน้ตบุ๊ค"
-            sidebarItems={notebookBrands}
+            title=""
+            sideTitle="โน้ตบุ๊ค"
+            sideItems={notebookBrands}
             products={showNotebook}
             onAddToCart={addToCart}
+            accentTitle="ACER"
           />
 
           <HorizontalProductSection
@@ -138,11 +137,11 @@ export default function Shop({ cart, setCart }) {
 
           <ProductSection
             title="ซีพียู"
-            sidebarTitle="หมวดหมู่"
-            sidebarItems={cpuCategories}
+            sideTitle="หมวดหมู่"
+            sideItems={cpuCategories}
             products={showCpu}
             onAddToCart={addToCart}
-            purpleTitle
+            accentTitle="ซีพียู"
           />
         </>
       )}
