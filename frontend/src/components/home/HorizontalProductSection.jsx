@@ -4,6 +4,7 @@ export default function HorizontalProductSection({
   title,
   products = [],
   onAddToCart,
+  emptyText = "ไม่มีสินค้า",
 }) {
   return (
     <section className="product-section">
@@ -13,13 +14,17 @@ export default function HorizontalProductSection({
       </div>
 
       <div className="horizontal-product-grid">
-        {products.map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            onAddToCart={onAddToCart}
-          />
-        ))}
+        {products.length ? (
+          products.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              onAddToCart={onAddToCart}
+            />
+          ))
+        ) : (
+          <div className="product-empty">{emptyText}</div>
+        )}
       </div>
     </section>
   );

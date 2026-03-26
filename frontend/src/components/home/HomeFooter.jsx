@@ -32,7 +32,7 @@ export default function HomeFooter() {
         </p>
       </div>
 
-      <div className="footer-column">
+      <div className="footer-column footer-links">
         <h4>เกี่ยวกับเรา</h4>
         <p>ติดต่อเรา</p>
         <p>เกี่ยวกับเรา</p>
@@ -40,10 +40,10 @@ export default function HomeFooter() {
         <p>นโยบายความเป็นส่วนตัว</p>
       </div>
 
-      <div className="footer-column">
+      <div className="footer-column footer-contact">
         <h4>ติดต่อเรา</h4>
-        <p>เบอร์โทรศัพท์ : xxx-xxx-xxxx</p>
-        <p>อีเมล : xxxxxxxx@ilovecpu.com</p>
+        <p><strong>เบอร์โทรศัพท์ :</strong> xxx-xxx-xxxx</p>
+        <p><strong>อีเมล :</strong> xxxxxxxx@ilovecpu.com</p>
       </div>
     </footer>
   );

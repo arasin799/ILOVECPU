@@ -9,7 +9,7 @@ export default function ProductCard({ product, onAddToCart }) {
     : null;
 
   return (
-    <div className="product-card shop-card">
+    <div className={`product-card shop-card ${product.id === 1 ? "active-card" : ""}`}>
       <Link to={`/products/${product.id}`} className="product-thumb shop-thumb">
         {imageSrc ? (
           <img src={imageSrc} alt={product.name} />

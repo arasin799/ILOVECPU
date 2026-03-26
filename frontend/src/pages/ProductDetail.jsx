@@ -1,10 +1,82 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import HomeHeader from "../components/home/HomeHeader";
 import HomeFooter from "../components/home/HomeFooter";
 import "../styles/home.css";
 import "../styles/product-detail.css";
 import { API_BASE } from "../config";
+
+function resolveImageUrl(imageUrl) {
+  if (!imageUrl) return null;
+  if (
+    imageUrl.startsWith("http://") ||
+    imageUrl.startsWith("https://") ||
+    imageUrl.startsWith("data:") ||
+    imageUrl.startsWith("blob:")
+  ) {
+    return imageUrl;
+  }
+  return imageUrl.startsWith("/") ? `${API_BASE}${imageUrl}` : `${API_BASE}/${imageUrl}`;
+}
+
+function normalizeProductImages(product) {
+  if (!product) return [];
+
+  let urls = [];
+  const imageUrlsRaw = product.imageUrls;
+
+  if (Array.isArray(imageUrlsRaw)) {
+    urls = imageUrlsRaw;
+  } else if (typeof imageUrlsRaw === "string" && imageUrlsRaw.trim()) {
+    try {
+      const parsed = JSON.parse(imageUrlsRaw);
+      urls = Array.isArray(parsed) ? parsed : [imageUrlsRaw];
+    } catch {
+      urls = [imageUrlsRaw];
+    }
+  }
+
+  if (product.imageUrl) {
+    urls.unshift(product.imageUrl);
+  }
+
+  return Array.from(
+    new Set(
+      urls
+        .map((url) => String(url || "").trim())
+        .filter(Boolean)
+    )
+  ).slice(0, 4);
+}
+
+function SafeProductImage({ imageUrl, alt, placeholderClassName }) {
+  const [isError, setIsError] = useState(false);
+  const resolvedSrc = useMemo(() => resolveImageUrl(imageUrl), [imageUrl]);
+
+  useEffect(() => {
+    setIsError(false);
+  }, [resolvedSrc]);
+
+  if (!resolvedSrc || isError) {
+    return <div className={placeholderClassName}>IMG</div>;
+  }
+
+  return <img src={resolvedSrc} alt={alt} onError={() => setIsError(true)} />;
+}
+
+function normalizeProductSpecs(specs) {
+  if (!Array.isArray(specs)) return [];
+
+  return specs
+    .map((item) => {
+      if (Array.isArray(item)) {
+        return [String(item[0] || "").trim(), String(item[1] || "").trim()];
+      }
+
+      return [String(item?.label || "").trim(), String(item?.value || "").trim()];
+    })
+    .filter(([label, value]) => label && value);
+}
 
 const mockSpecsByCategory = {
   NOTEBOOK: [
@@ -27,90 +99,90 @@ const mockSpecsByCategory = {
     ["TDP", "65W+"],
     ["Warranty", "3 Years"],
   ],
-  MAINBOARD: [
-    ["Brand", "MSI / ASUS / GIGABYTE"],
-    ["Socket", "AM4 / AM5 / LGA1700"],
-    ["Chipset", "A520 / B550 / B760"],
-    ["Memory Support", "DDR4 / DDR5"],
-    ["Form Factor", "mATX / ATX"],
-    ["Storage Slots", "M.2 NVMe / SATA"],
-    ["LAN", "Gigabit LAN"],
-    ["Warranty", "3 Years"],
-  ],
-  GPU: [
-    ["Brand", "MSI / ASUS / GIGABYTE"],
-    ["GPU Chip", "RTX / Radeon"],
-    ["Memory", "8GB / 12GB GDDR6"],
-    ["Interface", "PCIe 4.0"],
-    ["Output", "HDMI / DisplayPort"],
-    ["Recommended PSU", "550W+"],
-    ["Cooling", "Dual / Triple Fan"],
-    ["Warranty", "3 Years"],
-  ],
-  RAM: [
-    ["Brand", "KINGSTON / CORSAIR"],
-    ["Capacity", "16GB / 32GB"],
-    ["Type", "DDR4 / DDR5"],
-    ["Speed", "3200 / 5200 / 5600 MT/s"],
-    ["Kit", "Single / Dual Channel"],
-    ["Voltage", "1.2V / 1.35V"],
-    ["Heatspreader", "Yes"],
-    ["Warranty", "Lifetime"],
-  ],
-  STORAGE: [
-    ["Brand", "WD / SAMSUNG / CRUCIAL"],
-    ["Type", "NVMe / SATA SSD"],
-    ["Capacity", "1TB"],
-    ["Interface", "PCIe 4.0 / SATA"],
-    ["Read Speed", "Up to 5000 MB/s"],
-    ["Write Speed", "Up to 4200 MB/s"],
-    ["Form Factor", "M.2 2280 / 2.5 inch"],
-    ["Warranty", "3 - 5 Years"],
-  ],
-  ACCESSORY: [
-    ["Brand", "LOGITECH / UGREEN / TP-LINK"],
-    ["Category", "Accessory"],
-    ["Connection", "USB / HDMI / PCIe"],
-    ["Compatibility", "Windows / Mac"],
-    ["Material", "Standard"],
-    ["Color", "Black / Gray"],
-    ["Package", "1 Unit"],
-    ["Warranty", "1 Year"],
-  ],
 };
 
-const mockReviews = [
-  { id: 1, name: "User 1", text: "สินค้าใช้งานดีมาก", stars: 5 },
-  { id: 2, name: "User 2", text: "ส่งไว คุณภาพดี", stars: 5 },
-  { id: 3, name: "User 3", text: "ราคาดี คุ้มค่ามาก", stars: 5 },
-];
+const DEFAULT_RATING_STATS = [5, 4, 3, 2, 1].map((stars) => ({
+  stars,
+  count: 0,
+  percent: 0,
+}));
 
-export default function ProductDetail({ cart, setCart }) {
+function normalizeRatingStats(stats) {
+  if (!Array.isArray(stats)) return DEFAULT_RATING_STATS;
+
+  const byStars = new Map();
+  for (const item of stats) {
+    const stars = Number(item?.stars || 0);
+    if (stars >= 1 && stars <= 5) {
+      byStars.set(stars, {
+        stars,
+        count: Math.max(0, Number(item?.count || 0)),
+        percent: Math.max(0, Number(item?.percent || 0)),
+      });
+    }
+  }
+
+  return [5, 4, 3, 2, 1].map((stars) => (
+    byStars.get(stars) || { stars, count: 0, percent: 0 }
+  ));
+}
+
+function toStarsText(value) {
+  const stars = Math.max(0, Math.min(5, Math.round(Number(value || 0))));
+  return "\u2605".repeat(stars) + "\u2606".repeat(5 - stars);
+}
+
+const MAX_STOCK_MESSAGE = "\u0e08\u0e33\u0e19\u0e27\u0e19\u0e2a\u0e39\u0e07\u0e2a\u0e38\u0e14\u0e43\u0e19\u0e2a\u0e15\u0e4a\u0e2d\u0e01";
+
+export default function ProductDetail({ cart = [], setCart }) {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const [product, setProduct] = useState(null);
   const [allProducts, setAllProducts] = useState([]);
   const [error, setError] = useState("");
   const [qty, setQty] = useState(1);
   const [q, setQ] = useState("");
+  const [activeImage, setActiveImage] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [reviewSummary, setReviewSummary] = useState({
+    averageRating: 0,
+    totalReviews: 0,
+    ratingStats: DEFAULT_RATING_STATS,
+  });
+
+  const stockLimit = useMemo(() => {
+    const stockRaw = Number(product?.stock);
+    if (!Number.isFinite(stockRaw)) return null;
+    return Math.max(0, Math.floor(stockRaw));
+  }, [product]);
 
   useEffect(() => {
     async function loadData() {
       setError("");
       try {
-        const [productRes, allRes] = await Promise.all([
+        const [productRes, allRes, reviewsRes] = await Promise.all([
           fetch(`${API_BASE}/api/products/${id}`),
           fetch(`${API_BASE}/api/products`),
+          fetch(`${API_BASE}/api/products/${id}/reviews`),
         ]);
 
         const productData = await productRes.json();
         const allData = await allRes.json();
+        const reviewsData = await reviewsRes.json();
 
         if (!productRes.ok) throw new Error(productData?.message || `HTTP ${productRes.status}`);
         if (!allRes.ok) throw new Error(allData?.message || `HTTP ${allRes.status}`);
+        if (!reviewsRes.ok) throw new Error(reviewsData?.message || `HTTP ${reviewsRes.status}`);
 
         setProduct(productData);
         setAllProducts(Array.isArray(allData) ? allData : []);
+        setReviews(Array.isArray(reviewsData?.reviews) ? reviewsData.reviews : []);
+        setReviewSummary({
+          averageRating: Number(reviewsData?.averageRating || 0),
+          totalReviews: Math.max(0, Number(reviewsData?.totalReviews || 0)),
+          ratingStats: normalizeRatingStats(reviewsData?.ratingStats),
+        });
       } catch (e) {
         setError(String(e.message || e));
       }
@@ -133,6 +205,12 @@ export default function ProductDetail({ cart, setCart }) {
 
   const specs = useMemo(() => {
     if (!product) return [];
+
+    const customSpecs = normalizeProductSpecs(product.specs);
+    if (customSpecs.length) {
+      return customSpecs;
+    }
+
     return mockSpecsByCategory[product.category] || [
       ["Brand", product.brand || "-"],
       ["Category", product.category || "-"],
@@ -141,17 +219,48 @@ export default function ProductDetail({ cart, setCart }) {
     ];
   }, [product]);
 
+  const galleryImages = useMemo(() => normalizeProductImages(product), [product]);
+  const mainImage = activeImage || galleryImages[0] || product?.imageUrl || null;
+
+  useEffect(() => {
+    setActiveImage((prev) => {
+      if (!galleryImages.length) return null;
+      if (prev && galleryImages.includes(prev)) return prev;
+      return galleryImages[0];
+    });
+  }, [galleryImages]);
+
+  useEffect(() => {
+    if (stockLimit === null) return;
+    setQty((prev) => Math.min(prev, Math.max(1, stockLimit)));
+  }, [stockLimit]);
+
   function addToCart() {
-    if (!product) return;
+    if (!product || !setCart) return;
+
+    let reachedMax = false;
 
     setCart((prev) => {
       const idx = prev.findIndex((x) => x.productId === product.id);
+      const currentQty = idx >= 0 ? prev[idx].qty : 0;
+      const requestedQty = currentQty + qty;
+      const nextQty =
+        stockLimit === null ? requestedQty : Math.min(stockLimit, requestedQty);
+
+      if (stockLimit !== null && requestedQty > stockLimit) {
+        reachedMax = true;
+      }
+
+      if (nextQty <= currentQty) {
+        reachedMax = true;
+        return prev;
+      }
 
       if (idx >= 0) {
         const next = [...prev];
         next[idx] = {
           ...next[idx],
-          qty: next[idx].qty + qty,
+          qty: nextQty,
           price: product.price,
           name: product.name,
         };
@@ -162,17 +271,29 @@ export default function ProductDetail({ cart, setCart }) {
         ...prev,
         {
           productId: product.id,
-          qty,
+          qty: nextQty,
           price: product.price,
           name: product.name,
         },
       ];
     });
+
+    if (reachedMax) {
+      alert(MAX_STOCK_MESSAGE);
+    }
   }
 
   function buyNow() {
     addToCart();
-    window.location.href = "/checkout";
+    navigate("/checkout");
+  }
+
+  function goBack() {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate("/");
   }
 
   if (error) {
@@ -188,30 +309,51 @@ export default function ProductDetail({ cart, setCart }) {
       <HomeHeader
         q={q}
         setQ={setQ}
-        onSearch={() => (window.location.href = `/?q=${encodeURIComponent(q)}`)}
+        onSearch={() => navigate(q ? `/?q=${encodeURIComponent(q)}` : "/")}
         cartCount={cartCount}
       />
+
+      <div className="detail-back-row">
+        <button type="button" className="detail-back-btn" onClick={goBack}>
+          ← กลับ
+        </button>
+      </div>
 
       <section className="detail-top-card">
         <div className="detail-gallery">
           <div className="detail-main-image">
-            {product.imageUrl ? (
-              <img src={product.imageUrl} alt={product.name} />
-            ) : (
-              <div className="detail-image-placeholder">IMG</div>
-            )}
+            <SafeProductImage
+              imageUrl={mainImage}
+              alt={product.name}
+              placeholderClassName="detail-image-placeholder"
+            />
           </div>
 
           <div className="detail-thumbs">
-            {[1, 2, 3].map((n) => (
-              <div key={n} className="detail-thumb">
-                {product.imageUrl ? (
-                  <img src={product.imageUrl} alt={`${product.name}-${n}`} />
-                ) : (
-                  <div className="detail-thumb-placeholder">IMG</div>
-                )}
+            {galleryImages.length ? (
+              galleryImages.map((imageUrl, index) => (
+                <button
+                  key={`${imageUrl}-${index}`}
+                  type="button"
+                  className={`detail-thumb ${imageUrl === mainImage ? "is-active" : ""}`}
+                  onClick={() => setActiveImage(imageUrl)}
+                >
+                  <SafeProductImage
+                    imageUrl={imageUrl}
+                    alt={`${product.name}-${index + 1}`}
+                    placeholderClassName="detail-thumb-placeholder"
+                  />
+                </button>
+              ))
+            ) : (
+              <div className="detail-thumb">
+                <SafeProductImage
+                  imageUrl={null}
+                  alt={`${product.name}-thumb`}
+                  placeholderClassName="detail-thumb-placeholder"
+                />
               </div>
-            ))}
+            )}
           </div>
         </div>
 
@@ -236,17 +378,29 @@ export default function ProductDetail({ cart, setCart }) {
             <button
               type="button"
               className="qty-btn"
+              aria-label="Decrease quantity"
               onClick={() => setQty((v) => Math.max(1, v - 1))}
             >
-              -
+              <span className="qty-icon qty-icon-minus" aria-hidden="true" />
             </button>
             <div className="qty-value">{qty}</div>
             <button
               type="button"
               className="qty-btn"
-              onClick={() => setQty((v) => Math.min(product.stock || 99, v + 1))}
+              aria-label="Increase quantity"
+              onClick={() => {
+                const maxQty = stockLimit === null ? 99 : Math.max(1, stockLimit);
+                setQty((v) => {
+                  if (v >= maxQty) {
+                    alert(MAX_STOCK_MESSAGE);
+                    return v;
+                  }
+                  return v + 1;
+                });
+              }}
+              disabled={stockLimit !== null && qty >= Math.max(1, stockLimit)}
             >
-              +
+              <span className="qty-icon qty-icon-plus" aria-hidden="true" />
             </button>
           </div>
 
@@ -262,7 +416,7 @@ export default function ProductDetail({ cart, setCart }) {
       </section>
 
       <section className="specs-section">
-        <h2>คุณสมบัติสินค้า</h2>
+        <h2>คุณสมบัติ</h2>
 
         <div className="specs-card">
           {specs.map(([label, value]) => (
@@ -275,71 +429,86 @@ export default function ProductDetail({ cart, setCart }) {
       </section>
 
       <section className="reviews-section">
-        <div className="review-header">
-          <h2>รีวิวจากลูกค้า</h2>
-          <button type="button">ทั้งหมด &gt;</button>
-        </div>
-
-        <div className="review-layout">
-          <div className="review-summary-card">
-            <div className="review-score">5.0</div>
-            <div className="review-stars">★★★★★</div>
-            <div className="review-count">(56)</div>
-
-            {[5, 4, 3, 2, 1].map((n) => (
-              <div className="rating-row" key={n}>
-                <span>{n}★</span>
-                <div className="rating-bar">
-                  <div
-                    className="rating-fill"
-                    style={{ width: n === 5 ? "100%" : "0%" }}
-                  />
-                </div>
-                <span>{n === 5 ? "100%" : "0%"}</span>
-              </div>
-            ))}
+        <div className="section-shell">
+          <div className="review-header">
+            <h2>รีวิว</h2>
+            <button type="button">ดูทั้งหมด &gt;</button>
           </div>
 
-          <div className="review-list">
-            {mockReviews.map((review) => (
-              <div key={review.id} className="review-item">
-                <div className="review-avatar">👤</div>
-                <div className="review-content">
-                  <div className="review-name">{review.name}</div>
-                  <div className="review-text">{review.text}</div>
+          <div className="review-layout">
+            <div className="review-summary-card">
+              <div className="review-score">{reviewSummary.averageRating.toFixed(1)}</div>
+              <div className="review-stars">{toStarsText(reviewSummary.averageRating)}</div>
+              <div className="review-count">({reviewSummary.totalReviews})</div>
+
+              {reviewSummary.ratingStats.map((item) => (
+                <div className="rating-row" key={item.stars}>
+                  <span>{item.stars}★</span>
+                  <div className="rating-bar">
+                    <div
+                      className="rating-fill"
+                      style={{ width: `${item.percent}%` }}
+                    />
+                  </div>
+                  <span>{item.percent}%</span>
                 </div>
-                <div className="review-item-stars">
-                  {"★".repeat(review.stars)}
+              ))}
+            </div>
+
+            <div className="review-list">
+              {reviews.length === 0 ? (
+                <div className="review-item">
+                  <div className="review-avatar">👤</div>
+                  <div className="review-content">
+                    <div className="review-name">ยังไม่มีรีวิว</div>
+                    <div className="review-text">เป็นคนแรกที่รีวิวสินค้านี้</div>
+                  </div>
+                  <div className="review-item-stars" />
                 </div>
-              </div>
-            ))}
+              ) : (
+                reviews.map((review) => (
+                  <div key={review.id} className="review-item">
+                    <div className="review-avatar">👤</div>
+                    <div className="review-content">
+                      <div className="review-name">{review.name}</div>
+                      <div className="review-text">{review.text}</div>
+                    </div>
+                    <div className="review-item-stars">{toStarsText(review.stars)}</div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </section>
 
       <section className="related-section">
-        <div className="review-header">
-          <h2>จากหมวดหมู่เดียวกัน</h2>
-          <button type="button">ดูทั้งหมด &gt;</button>
-        </div>
+        <div className="section-shell">
+          <div className="review-header">
+            <h2>จากหมวดหมู่เดียวกัน</h2>
+            <button type="button">ดูทั้งหมด &gt;</button>
+          </div>
 
-        <div className="related-grid">
-          {relatedProducts.map((item) => (
-            <Link to={`/products/${item.id}`} key={item.id} className="related-card">
-              <div className="related-image">
-                {item.imageUrl ? (
-                  <img src={item.imageUrl} alt={item.name} />
-                ) : (
-                  <div className="detail-thumb-placeholder">IMG</div>
-                )}
-              </div>
+          <div className="related-grid">
+            {relatedProducts.length === 0 ? (
+              <div className="related-empty">ยังไม่มีสินค้าใกล้เคียง</div>
+            ) : (
+              relatedProducts.map((item) => (
+                <Link to={`/products/${item.id}`} key={item.id} className="related-card">
+                  <div className="related-image">
+                    <SafeProductImage
+                      imageUrl={item.imageUrl}
+                      alt={item.name}
+                      placeholderClassName="detail-thumb-placeholder"
+                    />
+                  </div>
 
-              <div className="related-name">{item.name}</div>
-              <div className="related-price">
-                ฿{Number(item.price).toLocaleString()}.00
-              </div>
-            </Link>
-          ))}
+                  <div className="related-name">{item.name}</div>
+                  <div className="related-price">฿{Number(item.price).toLocaleString()}.00</div>
+                </Link>
+              ))
+            )}
+          </div>
         </div>
       </section>
 
@@ -347,3 +516,4 @@ export default function ProductDetail({ cart, setCart }) {
     </div>
   );
 }
+
