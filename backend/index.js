@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 const db = require("./db");
@@ -9,11 +11,12 @@ const jwt = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
 const STAFF_BACKOFFICE_CODE =
   process.env.STAFF_BACKOFFICE_CODE || "123456";
-const CORS_ORIGINS = [
-  "http://localhost:5173",
-  "https://ilovecpu-frontend.vercel.app",
-  "https://ilovecpu-frontend-git-main-kkkkkkkks-projects-0b39c2d6.vercel.app",
-];
+
+const CORS_ORIGINS = (process.env.CORS_ORIGINS || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const UPLOADS_DIR = path.join(__dirname, "uploads");
 const IMAGES_DIR = path.join(__dirname, "images");
 const MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
@@ -21,10 +24,21 @@ const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg"]);
 
 const app = express();
 
-app.use(cors({
-  origin: CORS_ORIGINS,
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // อนุญาต request ที่ไม่มี origin เช่น Postman / server-to-server
+      if (!origin) return callback(null, true);
+
+      if (CORS_ORIGINS.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`CORS not allowed for origin: ${origin}`));
+    },
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 app.use("/uploads", express.static(UPLOADS_DIR));
@@ -32,6 +46,17 @@ app.use("/images", express.static(IMAGES_DIR));
 
 app.get("/", (req, res) => {
   res.send("Backend is running");
+});
+
+app.get("/api/test", (req, res) => {
+  res.json({ message: "frontend connected to backend" });
+});
+
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    ok: true,
+    message: "Server is healthy",
+  });
 });
 
 function normalizeImageUrls(input) {
@@ -1290,4 +1315,3 @@ const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`server running on ${PORT}`);
 });
-
