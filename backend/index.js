@@ -9,21 +9,26 @@ const jwt = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
 const STAFF_BACKOFFICE_CODE =
   process.env.STAFF_BACKOFFICE_CODE || "123456";
+const CORS_ORIGINS = [
+  "http://localhost:5173",
+  "https://ilovecpu-frontend.vercel.app",
+  "https://ilovecpu-frontend-git-main-kkkkkkkks-projects-0b39c2d6.vercel.app",
+];
+const UPLOADS_DIR = path.join(__dirname, "uploads");
+const IMAGES_DIR = path.join(__dirname, "images");
+const MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg"]);
 
 const app = express();
 
 app.use(cors({
-  origin: [
-    "http://localhost:5173",
-    "https://ilovecpu-frontend.vercel.app",
-    "https://ilovecpu-frontend-git-main-kkkkkkkks-projects-0b39c2d6.vercel.app"
-  ],
+  origin: CORS_ORIGINS,
   credentials: true,
 }));
 
 app.use(express.json());
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.use("/images", express.static(path.join(__dirname, "images")));
+app.use("/uploads", express.static(UPLOADS_DIR));
+app.use("/images", express.static(IMAGES_DIR));
 
 app.get("/", (req, res) => {
   res.send("Backend is running");
@@ -114,6 +119,37 @@ function getUniquePaymentCode() {
   return `TRX${Date.now().toString(36).toUpperCase()}`;
 }
 
+function getBearerToken(req) {
+  const auth = req.headers.authorization || "";
+  return auth.startsWith("Bearer ") ? auth.slice(7) : null;
+}
+
+function createAuthMiddleware({ assignKey, requiredRole = null }) {
+  return (req, res, next) => {
+    const token = getBearerToken(req);
+
+    if (!token) {
+      return res.status(401).json({ message: "Not logged in" });
+    }
+
+    try {
+      const payload = jwt.verify(token, JWT_SECRET);
+
+      if (requiredRole && payload?.role !== requiredRole) {
+        return res.status(403).json({ message: "Staff permission required" });
+      }
+
+      req[assignKey] = payload;
+      next();
+    } catch {
+      return res.status(401).json({ message: "Invalid token" });
+    }
+  };
+}
+
+const requireAuth = createAuthMiddleware({ assignKey: "user" });
+const requireStaff = createAuthMiddleware({ assignKey: "staff", requiredRole: "staff" });
+
 // Products
 app.get("/api/products", (req, res) => {
   const rows = db.prepare("SELECT * FROM products ORDER BY id DESC").all();
@@ -130,50 +166,11 @@ app.get("/api/products/:id", (req, res) => {
 
   res.json(toProductDto(row));
 });
-
-function requireAuth(req, res, next) {
-  const auth = req.headers.authorization || "";
-  const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
-
-  if (!token) {
-    return res.status(401).json({ message: "Not logged in" });
-  }
-
-  try {
-    const payload = jwt.verify(token, JWT_SECRET);
-    req.user = payload;
-    next();
-  } catch {
-    return res.status(401).json({ message: "Invalid token" });
-  }
-}
-
-function requireStaff(req, res, next) {
-  const auth = req.headers.authorization || "";
-  const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
-
-  if (!token) {
-    return res.status(401).json({ message: "Not logged in" });
-  }
-
-  try {
-    const payload = jwt.verify(token, JWT_SECRET);
-    if (payload?.role !== "staff") {
-      return res.status(403).json({ message: "Staff permission required" });
-    }
-    req.staff = payload;
-    next();
-  } catch {
-    return res.status(401).json({ message: "Invalid token" });
-  }
-}
-
 const upload = multer({
-  dest: path.join(__dirname, "uploads"),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  dest: UPLOADS_DIR,
+  limits: { fileSize: MAX_UPLOAD_SIZE },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ["image/png", "image/jpeg"];
-    if (allowedTypes.includes(file.mimetype)) {
+    if (ALLOWED_IMAGE_TYPES.has(file.mimetype)) {
       cb(null, true);
     } else {
       cb(new Error("Only PNG or JPEG images are allowed"), false);

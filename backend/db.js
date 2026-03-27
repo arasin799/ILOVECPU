@@ -27,190 +27,49 @@ if (!process.env.DB_PATH) {
 const db = new Database(resolvedDbPath);
 db.pragma("foreign_keys = ON");
 db.pragma("journal_mode = WAL");
+db.pragma("busy_timeout = 5000");
+const schemaPath = path.join(__dirname, "schema.sql");
+const schemaSql = fs.readFileSync(schemaPath, "utf8");
+const columnMigrations = [
+  ["orders", "userId INTEGER"],
+  ["orders", "paymentMethod TEXT"],
+  ["orders", "paymentCode TEXT"],
+  ["orders", "paymentVerifiedAt TEXT"],
+  ["users", "firstName TEXT"],
+  ["users", "lastName TEXT"],
+  ["users", "username TEXT"],
+  ["users", "phone TEXT"],
+  ["users", "position TEXT"],
+  ["users", "salary INTEGER"],
+  ["users", "nickname TEXT"],
+  ["products", "imageUrls TEXT"],
+  ["products", "specs TEXT"],
+  ["employees", "birthDate TEXT"],
+  ["employees", "hireDate TEXT"],
+];
 
-db.exec(`
-CREATE TABLE IF NOT EXISTS products (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  brand TEXT NOT NULL,
-  category TEXT NOT NULL,
-  price INTEGER NOT NULL,
-  stock INTEGER NOT NULL DEFAULT 0,
-  imageUrl TEXT,
-  specs TEXT,
-  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
-);
-`);
-
-db.exec(`
-CREATE TABLE IF NOT EXISTS product_reviews (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  productId INTEGER NOT NULL,
-  userId INTEGER,
-  rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
-  comment TEXT NOT NULL,
-  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
-  FOREIGN KEY(productId) REFERENCES products(id) ON DELETE CASCADE,
-  FOREIGN KEY(userId) REFERENCES users(id) ON DELETE SET NULL
-);
-`);
-
-db.exec(`
-CREATE INDEX IF NOT EXISTS idx_product_reviews_productId
-ON product_reviews(productId);
-`);
-
-db.exec(`
-CREATE TABLE IF NOT EXISTS orders (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  customerName TEXT NOT NULL,
-  phone TEXT NOT NULL,
-  address TEXT NOT NULL,
-  total INTEGER NOT NULL,
-  status TEXT NOT NULL DEFAULT 'PENDING_PAYMENT',
-  paymentMethod TEXT,
-  paymentCode TEXT,
-  paymentVerifiedAt TEXT,
-  slipUrl TEXT,
-  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE TABLE IF NOT EXISTS order_items (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  orderId INTEGER NOT NULL,
-  productId INTEGER NOT NULL,
-  qty INTEGER NOT NULL,
-  price INTEGER NOT NULL,
-  FOREIGN KEY(orderId) REFERENCES orders(id),
-  FOREIGN KEY(productId) REFERENCES products(id)
-);
-`);
-
-db.exec(`
-CREATE TABLE IF NOT EXISTS users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  email TEXT NOT NULL UNIQUE,
-  passwordHash TEXT NOT NULL,
-  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
-);
-`);
-
-db.exec(`
-CREATE TABLE IF NOT EXISTS account_deletion_logs (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  userId INTEGER,
-  email TEXT NOT NULL,
-  firstName TEXT,
-  lastName TEXT,
-  username TEXT,
-  phone TEXT,
-  reason TEXT NOT NULL,
-  deletedAt TEXT NOT NULL DEFAULT (datetime('now'))
-);
-`);
-
-db.exec(`
-CREATE TABLE IF NOT EXISTS employees (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  firstName TEXT NOT NULL,
-  lastName TEXT NOT NULL,
-  nickname TEXT NOT NULL,
-  position TEXT NOT NULL,
-  salary INTEGER NOT NULL,
-  birthDate TEXT NOT NULL,
-  hireDate TEXT NOT NULL,
-  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
-);
-`);
-
-try {
-  db.prepare("ALTER TABLE orders ADD COLUMN userId INTEGER").run();
-} catch {
-  // column exists already
+function ensureColumn(tableName, columnDefinition) {
+  try {
+    db.prepare(`ALTER TABLE ${tableName} ADD COLUMN ${columnDefinition}`).run();
+  } catch {
+    // column exists already
+  }
 }
 
-try {
-  db.prepare("ALTER TABLE users ADD COLUMN firstName TEXT").run();
-} catch {
-  // column exists already
+function applySchema() {
+  db.exec(schemaSql);
 }
 
-try {
-  db.prepare("ALTER TABLE users ADD COLUMN lastName TEXT").run();
-} catch {
-  // column exists already
+function applyColumnMigrations() {
+  columnMigrations.forEach(([tableName, columnDefinition]) => {
+    ensureColumn(tableName, columnDefinition);
+  });
 }
 
-try {
-  db.prepare("ALTER TABLE users ADD COLUMN username TEXT").run();
-} catch {
-  // column exists already
-}
-
-try {
-  db.prepare("ALTER TABLE users ADD COLUMN phone TEXT").run();
-} catch {
-  // column exists already
-}
-
-try {
-  db.prepare("ALTER TABLE users ADD COLUMN position TEXT").run();
-} catch {
-  // column exists already
-}
-
-try {
-  db.prepare("ALTER TABLE users ADD COLUMN salary INTEGER").run();
-} catch {
-  // column exists already
-}
-
-try {
-  db.prepare("ALTER TABLE users ADD COLUMN nickname TEXT").run();
-} catch {
-  // column exists already
-}
-
-try {
-  db.prepare("ALTER TABLE products ADD COLUMN imageUrls TEXT").run();
-} catch {
-  // column exists already
-}
-
-try {
-  db.prepare("ALTER TABLE products ADD COLUMN specs TEXT").run();
-} catch {
-  // column exists already
-}
-
-try {
-  db.prepare("ALTER TABLE employees ADD COLUMN birthDate TEXT").run();
-} catch {
-  // column exists already
-}
-
-try {
-  db.prepare("ALTER TABLE employees ADD COLUMN hireDate TEXT").run();
-} catch {
-  // column exists already
-}
-
-try {
-  db.prepare("ALTER TABLE orders ADD COLUMN paymentMethod TEXT").run();
-} catch {
-  // column exists already
-}
-
-try {
-  db.prepare("ALTER TABLE orders ADD COLUMN paymentCode TEXT").run();
-} catch {
-  // column exists already
-}
-
-try {
-  db.prepare("ALTER TABLE orders ADD COLUMN paymentVerifiedAt TEXT").run();
-} catch {
-  // column exists already
-}
+applySchema();
+applyColumnMigrations();
+// Re-apply the schema so CREATE INDEX statements can safely run after legacy columns exist.
+applySchema();
 
 module.exports = db;
+module.exports.resolvedDbPath = resolvedDbPath;
