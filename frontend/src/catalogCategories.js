@@ -1,11 +1,5 @@
 export const HEADER_CATEGORY_ITEMS = [
   {
-    key: "BUILD_PC",
-    label: "จัดสเปคคอม",
-    sourceCategories: ["BUILD_PC"],
-    description: "รวมชุดจัดสเปคคอมและอุปกรณ์ประกอบครบชุดสำหรับทุกการใช้งาน",
-  },
-  {
     key: "NOTEBOOK",
     label: "โน้ตบุ๊ค",
     sourceCategories: ["NOTEBOOK", "LAPTOP"],

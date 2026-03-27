@@ -99,7 +99,7 @@ export default function SignUp() {
           if (data?.token) {
             setToken(data.token);
           }
-          navigate("/orders");
+          navigate("/");
           return;
         }
 

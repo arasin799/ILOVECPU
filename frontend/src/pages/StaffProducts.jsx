@@ -218,6 +218,13 @@ export default function StaffProducts() {
           </button>
           <button
             type="button"
+            className="staff-secondary-btn staff-topbar-nav-btn"
+            onClick={() => navigate("/staff/orders/payments")}
+          >
+            คำสั่งซื้อ
+          </button>
+          <button
+            type="button"
             className="staff-danger-btn staff-topbar-nav-btn"
             onClick={logoutStaff}
           >

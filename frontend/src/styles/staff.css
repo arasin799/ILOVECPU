@@ -509,6 +509,139 @@
   color: #b13041;
 }
 
+.staff-order-queue-tabs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.staff-order-queue-tab {
+  border: 1px solid #d9c8e6;
+  border-radius: 999px;
+  background: #f6effb;
+  color: #5f3088;
+  padding: 9px 14px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.staff-order-queue-tab.is-active {
+  background: linear-gradient(145deg, #9f43c5, #7d2ba9);
+  color: #fff;
+  border-color: transparent;
+}
+
+.staff-order-card-list {
+  display: grid;
+  gap: 12px;
+}
+
+.staff-order-card {
+  border: 1px solid #ece2f4;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fdfbff 0%, #ffffff 100%);
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.staff-order-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.staff-order-card-head h3 {
+  margin: 0;
+  color: #43245f;
+  font-size: 20px;
+}
+
+.staff-order-card-head p {
+  margin: 4px 0 0;
+  color: #857796;
+  font-size: 13px;
+}
+
+.staff-order-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.staff-order-status-badge.status-paid {
+  background: #fff2de;
+  color: #c87300;
+}
+
+.staff-order-status-badge.status-packing,
+.staff-order-status-badge.status-shipped {
+  background: #ece1f7;
+  color: #6b2a99;
+}
+
+.staff-order-status-badge.status-delivered {
+  background: #e7f7ec;
+  color: #237a3f;
+}
+
+.staff-order-status-badge.status-cancelled {
+  background: #fce8ea;
+  color: #b13041;
+}
+
+.staff-order-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.staff-order-meta-block {
+  border: 1px solid #efe5f6;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fbf8fe;
+  display: grid;
+  gap: 4px;
+}
+
+.staff-order-meta-block small,
+.staff-order-address small {
+  color: #8b7a9d;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.staff-order-meta-block strong {
+  color: #402653;
+  font-size: 15px;
+}
+
+.staff-order-address {
+  border: 1px dashed #dbc9e8;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #faf6fd;
+}
+
+.staff-order-address p {
+  margin: 6px 0 0;
+  color: #5d4d70;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.staff-order-card-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .staff-error {
   margin: 0 0 8px;
   color: #c62828;
@@ -618,6 +751,28 @@
   }
 
   .staff-list-tools .staff-secondary-btn {
+    width: 100%;
+  }
+
+  .staff-order-queue-tabs {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .staff-order-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .staff-order-card-head {
+    flex-direction: column;
+  }
+
+  .staff-order-card-actions {
+    justify-content: stretch;
+  }
+
+  .staff-order-card-actions .staff-primary-btn {
     width: 100%;
   }
 }

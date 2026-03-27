@@ -898,6 +898,164 @@ app.delete("/api/staff/products/:id", requireStaff, (req, res) => {
 });
 
 // Orders
+function mapStaffOrderSummary(row) {
+  return {
+    id: Number(row?.id || 0),
+    customerName: String(row?.customerName || "").trim(),
+    phone: String(row?.phone || "").trim(),
+    address: String(row?.address || "").trim(),
+    total: Number(row?.total || 0),
+    status: String(row?.status || "").trim(),
+    paymentMethod: String(row?.paymentMethod || "").trim(),
+    paymentCode: String(row?.paymentCode || "").trim(),
+    paymentVerifiedAt: row?.paymentVerifiedAt || null,
+    createdAt: row?.createdAt || null,
+    itemCount: Number(row?.itemCount || 0),
+  };
+}
+
+function getStaffOrderItems(orderId) {
+  return db
+    .prepare(
+      `SELECT
+        oi.id,
+        oi.orderId,
+        oi.productId,
+        oi.qty,
+        oi.price,
+        COALESCE(p.name, 'สินค้า #' || oi.productId) AS productName,
+        COALESCE(p.brand, '') AS brand,
+        COALESCE(p.imageUrl, '') AS imageUrl
+      FROM order_items oi
+      LEFT JOIN products p ON p.id = oi.productId
+      WHERE oi.orderId = ?
+      ORDER BY oi.id ASC`
+    )
+    .all(orderId);
+}
+
+app.get("/api/staff/orders", requireStaff, (req, res) => {
+  const queue = String(req.query?.queue || "").trim().toLowerCase();
+  let whereClause = "";
+
+  if (queue === "payment") {
+    whereClause = "WHERE o.status = 'PAID'";
+  } else if (queue === "processing") {
+    whereClause = "WHERE o.status IN ('PACKING', 'SHIPPED')";
+  }
+
+  const rows = db
+    .prepare(
+      `SELECT
+        o.id,
+        o.customerName,
+        o.phone,
+        o.address,
+        o.total,
+        o.status,
+        o.paymentMethod,
+        o.paymentCode,
+        o.paymentVerifiedAt,
+        o.createdAt,
+        COUNT(oi.id) AS itemCount
+      FROM orders o
+      LEFT JOIN order_items oi ON oi.orderId = o.id
+      ${whereClause}
+      GROUP BY
+        o.id,
+        o.customerName,
+        o.phone,
+        o.address,
+        o.total,
+        o.status,
+        o.paymentMethod,
+        o.paymentCode,
+        o.paymentVerifiedAt,
+        o.createdAt
+      ORDER BY
+        CASE o.status
+          WHEN 'PAID' THEN 1
+          WHEN 'PACKING' THEN 2
+          WHEN 'SHIPPED' THEN 3
+          WHEN 'DELIVERED' THEN 4
+          ELSE 5
+        END,
+        o.id DESC`
+    )
+    .all();
+
+  return res.json(rows.map(mapStaffOrderSummary));
+});
+
+app.get("/api/staff/orders/:id", requireStaff, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ message: "Invalid order id" });
+  }
+
+  const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(id);
+  if (!order) {
+    return res.status(404).json({ message: "Order not found" });
+  }
+
+  return res.json({
+    ...order,
+    items: getStaffOrderItems(id),
+  });
+});
+
+app.patch("/api/staff/orders/:id/confirm-payment", requireStaff, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ message: "Invalid order id" });
+  }
+
+  const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(id);
+  if (!order) {
+    return res.status(404).json({ message: "Order not found" });
+  }
+  if (order.status !== "PAID") {
+    return res.status(400).json({ message: "Payment confirmation is allowed only for paid orders" });
+  }
+
+  db.prepare(
+    "UPDATE orders SET status = 'PACKING', paymentVerifiedAt = COALESCE(paymentVerifiedAt, datetime('now')) WHERE id = ?"
+  ).run(id);
+
+  return res.json({
+    ok: true,
+    status: "PACKING",
+    paymentVerifiedAt: new Date().toISOString(),
+  });
+});
+
+app.patch("/api/staff/orders/:id/status", requireStaff, (req, res) => {
+  const id = Number(req.params.id);
+  const nextStatus = String(req.body?.status || "").trim().toUpperCase();
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ message: "Invalid order id" });
+  }
+
+  const allowedTransitions = {
+    PACKING: "SHIPPED",
+    SHIPPED: "DELIVERED",
+  };
+
+  const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(id);
+  if (!order) {
+    return res.status(404).json({ message: "Order not found" });
+  }
+
+  const expectedNextStatus = allowedTransitions[String(order.status || "").trim().toUpperCase()];
+  if (!expectedNextStatus || nextStatus !== expectedNextStatus) {
+    return res.status(400).json({ message: "Invalid order status transition" });
+  }
+
+  db.prepare("UPDATE orders SET status = ? WHERE id = ?").run(nextStatus, id);
+  return res.json({ ok: true, status: nextStatus });
+});
+
 app.get("/api/my/orders", requireAuth, (req, res) => {
   const userId = req.user.id;
 
@@ -942,7 +1100,7 @@ app.post("/api/orders", requireAuth, (req, res) => {
   const safePaymentMethod = String(paymentMethod || "promptpay_qr").trim();
 
   const getProduct = db.prepare("SELECT * FROM products WHERE id = ?");
-  let total = 0;
+  let subtotal = 0;
 
   for (const it of items) {
     if (!it.productId || !it.qty || it.qty <= 0) {
@@ -958,8 +1116,12 @@ app.post("/api/orders", requireAuth, (req, res) => {
       return res.status(400).json({ message: `Stock not enough: ${p.name}` });
     }
 
-    total += p.price * it.qty;
+    subtotal += p.price * it.qty;
   }
+
+  const vat = Math.round(subtotal * 0.07 * 100) / 100;
+  const shipping = subtotal === 0 || subtotal >= 5000 ? 0 : 80;
+  const total = subtotal + vat + shipping;
 
   const tx = db.transaction(() => {
     const paymentCode = getUniquePaymentCode();
@@ -1111,12 +1273,12 @@ app.post("/api/my/orders/:id/confirm-transfer-code", requireAuth, (req, res) => 
   }
 
   db.prepare(
-    "UPDATE orders SET status = 'PACKING', paymentVerifiedAt = datetime('now') WHERE id = ?"
+    "UPDATE orders SET status = 'PAID' WHERE id = ?"
   ).run(id);
 
   return res.json({
     ok: true,
-    status: "PACKING",
+    status: "PAID",
   });
 });
 

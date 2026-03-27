@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import HomeHeader from "../components/home/HomeHeader";
 import BannerSection from "../components/home/BannerSection";
 import ProductSection from "../components/home/ProductSection";
@@ -31,6 +32,7 @@ const hardwareCategories = [
 const MAX_STOCK_MESSAGE = "\u0e08\u0e33\u0e19\u0e27\u0e19\u0e2a\u0e39\u0e07\u0e2a\u0e38\u0e14\u0e43\u0e19\u0e2a\u0e15\u0e4a\u0e2d\u0e01";
 
 export default function Shop({ cart, setCart }) {
+  const location = useLocation();
   const [products, setProducts] = useState([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
@@ -62,6 +64,20 @@ export default function Shop({ cart, setCart }) {
   useEffect(() => {
     loadProducts();
   }, []);
+
+  useEffect(() => {
+    if (location.hash !== "#about-us") return;
+
+    const scrollToFooter = () => {
+      document.getElementById("about-us")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    };
+
+    const frameId = window.requestAnimationFrame(scrollToFooter);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [location.hash]);
 
   function addToCart(p) {
     const stockRaw = Number(p?.stock);

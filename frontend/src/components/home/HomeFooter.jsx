@@ -1,6 +1,6 @@
 export default function HomeFooter() {
   return (
-    <footer className="home-footer">
+    <footer id="about-us" className="home-footer">
       <div className="footer-brand">
         <div className="footer-logo-box">
           <div className="footer-logo-circuit">

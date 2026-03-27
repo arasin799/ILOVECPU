@@ -50,8 +50,8 @@ function normalizeProductImages(product) {
 }
 
 function SafeProductImage({ imageUrl, alt, placeholderClassName }) {
-  const [isError, setIsError] = useState(false);
   const resolvedSrc = useMemo(() => resolveImageUrl(imageUrl), [imageUrl]);
+  const [isError, setIsError] = useState(false);
 
   useEffect(() => {
     setIsError(false);

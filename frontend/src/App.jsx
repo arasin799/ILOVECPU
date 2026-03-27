@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import YourOrders from "./pages/YourOrders";
 import OrderDetail from "./pages/OrderDetail";
+import TrackOrder from "./pages/TrackOrder";
 import Profile from "./pages/Profile";
 import ShippingAddresses from "./pages/ShippingAddresses";
 import EditProfile from "./pages/EditProfile";
@@ -19,6 +20,8 @@ import StaffEditProduct from "./pages/StaffEditProduct";
 import StaffEmployees from "./pages/StaffEmployees";
 import StaffCustomers from "./pages/StaffCustomers";
 import StaffAccountDeletions from "./pages/StaffAccountDeletions";
+import StaffConfirmPayments from "./pages/StaffConfirmPayments";
+import StaffProcessOrders from "./pages/StaffProcessOrders";
 
 import { getTokenRole } from "./authStore";
 
@@ -51,6 +54,7 @@ export default function App() {
           <Route path="/orders" element={<YourOrders cart={cart} />} />
           <Route path="/favorites" element={<Favorites cart={cart} />} />
           <Route path="/orders/:id" element={<OrderDetail />} />
+          <Route path="/orders/:id/tracking" element={<TrackOrder cart={cart} />} />
           <Route path="/profile" element={<Profile cart={cart} />} />
           <Route path="/profile/edit" element={<EditProfile cart={cart} />} />
           <Route path="/addresses" element={<ShippingAddresses cart={cart} />} />
@@ -58,6 +62,9 @@ export default function App() {
           <Route path="/staff/employees" element={<StaffEmployees />} />
           <Route path="/staff/customers" element={<StaffCustomers />} />
           <Route path="/staff/account-deletions" element={<StaffAccountDeletions />} />
+          <Route path="/staff/orders/payments" element={<StaffConfirmPayments />} />
+          <Route path="/staff/orders/processing" element={<StaffProcessOrders />} />
+          <Route path="/staff/products/new/edit" element={<StaffEditProduct />} />
           <Route path="/staff/products/:id/edit" element={<StaffEditProduct />} />
         </Routes>
     </div>

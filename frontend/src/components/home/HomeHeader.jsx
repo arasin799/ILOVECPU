@@ -18,6 +18,11 @@ export default function HomeHeader({
     setShowCategoryMenu(false);
   }
 
+  function handleGoToAbout() {
+    setShowCategoryMenu(false);
+    navigate("/#about-us");
+  }
+
   return (
     <header className="home-header">
       <div className="home-header-top">
@@ -63,34 +68,36 @@ export default function HomeHeader({
       </div>
 
       <div className="home-header-menu">
-        <button type="button" onClick={() => navigate("/")}>หน้าแรก</button>
-        <button type="button">จัดสเปกคอม</button>
-        <button type="button">เกี่ยวกับเรา</button>
+        <div className="home-header-menu-left">
+          <button type="button" onClick={() => navigate("/")}>หน้าแรก</button>
 
-        <div className="header-category-dropdown">
-          <button
-            type="button"
-            onClick={() => setShowCategoryMenu((prev) => !prev)}
-            aria-expanded={showCategoryMenu}
-          >
-            หมวดหมู่สินค้า
-          </button>
+          <div className="header-category-dropdown">
+            <button
+              type="button"
+              onClick={() => setShowCategoryMenu((prev) => !prev)}
+              aria-expanded={showCategoryMenu}
+            >
+              หมวดหมู่สินค้า
+            </button>
 
-          {showCategoryMenu ? (
-            <div className="header-category-menu">
-              {HEADER_CATEGORY_ITEMS.map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  className="header-category-item"
-                  onClick={() => handleSelectCategory(item)}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
+            {showCategoryMenu ? (
+              <div className="header-category-menu">
+                {HEADER_CATEGORY_ITEMS.map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    className="header-category-item"
+                    onClick={() => handleSelectCategory(item)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
+
+        <button type="button" onClick={handleGoToAbout}>เกี่ยวกับเรา</button>
       </div>
     </header>
   );

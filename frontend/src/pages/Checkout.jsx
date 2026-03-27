@@ -24,6 +24,8 @@ const paymentOptions = [
   { value: "promptpay_qr", label: "สแกน QR พร้อมเพย์" },
   { value: "cod", label: "เก็บเงินปลายทาง" },
 ];
+const VAT_RATE = 0.07;
+const VAT_PERCENT_LABEL = 7;
 const MAX_STOCK_MESSAGE = "\u0e08\u0e33\u0e19\u0e27\u0e19\u0e2a\u0e39\u0e07\u0e2a\u0e38\u0e14\u0e43\u0e19\u0e2a\u0e15\u0e4a\u0e2d\u0e01";
 
 function buildAddressText(item) {
@@ -38,6 +40,13 @@ async function parseJsonSafe(res) {
   } catch {
     return null;
   }
+}
+
+function formatCurrency(value) {
+  return Number(value || 0).toLocaleString("th-TH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export default function Checkout({ cart, setCart }) {
@@ -58,7 +67,10 @@ export default function Checkout({ cart, setCart }) {
   const [showQrModal, setShowQrModal] = useState(false);
   const [qrImageUrl, setQrImageUrl] = useState("");
   const [qrReference, setQrReference] = useState("");
+  const [qrAmount, setQrAmount] = useState(0);
+  const [qrRedirectPath, setQrRedirectPath] = useState("");
   const [stockWarningByProductId, setStockWarningByProductId] = useState({});
+  const [pendingRemoveItem, setPendingRemoveItem] = useState(null);
 
   useEffect(() => {
     const token = getToken();
@@ -131,7 +143,7 @@ export default function Checkout({ cart, setCart }) {
     [paymentMethod]
   );
 
-  const vat = Math.round(subtotal * 0.07 * 100) / 100;
+  const vat = Math.round(subtotal * VAT_RATE * 100) / 100;
   const shipping = subtotal === 0 || subtotal >= 5000 ? 0 : 80;
   const discount = 0;
   const grandTotal = subtotal + vat + shipping - discount;
@@ -201,6 +213,15 @@ export default function Checkout({ cart, setCart }) {
   }
 
   function dec(id) {
+    const targetItem = lineItems.find((item) => item.productId === id);
+    if (targetItem?.qty <= 1) {
+      setPendingRemoveItem({
+        productId: id,
+        name: targetItem.name,
+      });
+      return;
+    }
+
     setStockWarningByProductId((prev) => ({ ...prev, [id]: false }));
     setCart((prev) =>
       prev
@@ -212,6 +233,12 @@ export default function Checkout({ cart, setCart }) {
   function remove(id) {
     setStockWarningByProductId((prev) => ({ ...prev, [id]: false }));
     setCart((prev) => prev.filter((x) => x.productId !== id));
+  }
+
+  function confirmRemoveItem() {
+    if (!pendingRemoveItem?.productId) return;
+    remove(pendingRemoveItem.productId);
+    setPendingRemoveItem(null);
   }
 
   function goToDetailStep() {
@@ -255,27 +282,38 @@ export default function Checkout({ cart, setCart }) {
     setShowAddressForm(false);
   }
 
-  function buildQrPayload(reference) {
-    const amount = Number(grandTotal || 0).toFixed(2);
+  function buildQrPayload(reference, amountValue) {
+    const amount = Number(amountValue || 0).toFixed(2);
     return `PROMPTPAY|AMOUNT:${amount}|REF:${reference}|SHOP:ILOVECPU`;
   }
 
-  function openQrModal() {
-    const reference = `HP-${Date.now().toString().slice(-8)}`;
-    const payload = buildQrPayload(reference);
+  function openQrModal(referenceValue, amountValue) {
+    const reference = String(referenceValue || `HP-${Date.now().toString().slice(-8)}`).trim();
+    const payload = buildQrPayload(reference, amountValue);
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(payload)}`;
     setQrReference(reference);
+    setQrAmount(Number(amountValue || 0));
     setQrImageUrl(qrUrl);
     setShowQrModal(true);
   }
 
   function handleSelectPayment(method) {
     setPaymentMethod(method);
-    if (method === QR_PAYMENT_METHOD) {
-      openQrModal();
-      return;
-    }
     setShowQrModal(false);
+  }
+
+  function closeQrModal() {
+    setShowQrModal(false);
+    setQrImageUrl("");
+    setQrReference("");
+    setQrAmount(0);
+
+    if (qrRedirectPath) {
+      const nextPath = qrRedirectPath;
+      setQrRedirectPath("");
+      setCart([]);
+      navigate(nextPath);
+    }
   }
 
   async function placeOrder() {
@@ -330,18 +368,21 @@ export default function Checkout({ cart, setCart }) {
 
       if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
 
-      const createdOrderId = Number(data?.orderId);
       const createdPaymentCode = String(data?.paymentCode || "").trim();
+      const redirectPath = "/orders";
+
+      if (paymentMethod === QR_PAYMENT_METHOD) {
+        setQrRedirectPath(redirectPath);
+        openQrModal(createdPaymentCode || `HP-${Date.now().toString().slice(-8)}`, grandTotal);
+        return;
+      }
+
       const successMsg = createdPaymentCode
         ? `สั่งซื้อสำเร็จ\nรหัสโอนเงิน: ${createdPaymentCode}\nกรุณาใช้รหัสนี้ยืนยันการโอนในหน้าถัดไป`
         : "สั่งซื้อสำเร็จ";
       alert(successMsg);
       setCart([]);
-      if (Number.isInteger(createdOrderId) && createdOrderId > 0) {
-        navigate(`/orders/${createdOrderId}`);
-      } else {
-        navigate("/orders");
-      }
+      navigate(redirectPath);
     } catch (e) {
       setCheckoutStep(2);
       alert(`สั่งซื้อไม่สำเร็จ: ${String(e.message || e)}`);
@@ -394,7 +435,7 @@ export default function Checkout({ cart, setCart }) {
                     <div className="checkout-item-content">
                       <p className="checkout-item-name">{item.name}</p>
                       <div className="checkout-item-bottom">
-                        <div className="checkout-item-price">฿{Number(item.price).toLocaleString()}.00</div>
+                        <div className="checkout-item-price">฿{formatCurrency(item.price)}</div>
 
                         <div className="checkout-item-qty">
                           <div className="checkout-item-qty-controls">
@@ -552,17 +593,6 @@ export default function Checkout({ cart, setCart }) {
                       ))}
                     </div>
 
-                    {paymentMethod === QR_PAYMENT_METHOD && (
-                      <div className="checkout-qr-actions">
-                        <button
-                          type="button"
-                          className="checkout-outline-btn"
-                          onClick={openQrModal}
-                        >
-                          แสดง QR อีกครั้ง
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </section>
 
@@ -581,24 +611,24 @@ export default function Checkout({ cart, setCart }) {
             <h3>สรุปรายการสั่งซื้อ</h3>
             <div className="checkout-summary-line">
               <span>ค่าสินค้า :</span>
-              <b>฿{subtotal.toLocaleString()}</b>
+              <b>฿{formatCurrency(subtotal)}</b>
             </div>
             <div className="checkout-summary-line">
-              <span>ภาษีมูลค่าเพิ่ม :</span>
-              <b>฿{vat.toLocaleString()}</b>
+              <span>ภาษีมูลค่าเพิ่ม ({VAT_PERCENT_LABEL}%) :</span>
+              <b>฿{formatCurrency(vat)}</b>
             </div>
             <div className="checkout-summary-line">
               <span>ค่าจัดส่ง :</span>
-              <b>฿{shipping.toLocaleString()}</b>
+              <b>฿{formatCurrency(shipping)}</b>
             </div>
             <div className="checkout-summary-line">
               <span>ส่วนลด :</span>
-              <b>฿{discount.toLocaleString()}</b>
+              <b>฿{formatCurrency(discount)}</b>
             </div>
             <hr />
             <div className="checkout-summary-total">
               <span>ยอดรวม</span>
-              <strong>฿{grandTotal.toLocaleString()}</strong>
+              <strong>฿{formatCurrency(grandTotal)}</strong>
             </div>
 
             {checkoutStep > 1 && selectedAddress && (
@@ -634,17 +664,44 @@ export default function Checkout({ cart, setCart }) {
       <HomeFooter />
 
       {showQrModal && (
-        <div className="checkout-qr-overlay" onClick={() => setShowQrModal(false)}>
+        <div className="checkout-qr-overlay" onClick={closeQrModal}>
           <div className="checkout-qr-modal" onClick={(e) => e.stopPropagation()}>
             <h4>สแกน QR เพื่อชำระเงิน</h4>
-            <p className="checkout-qr-amount">ยอดชำระ ฿{grandTotal.toLocaleString()}</p>
+            <p className="checkout-qr-amount">ยอดชำระ ฿{formatCurrency(qrAmount)}</p>
             {qrImageUrl ? (
               <img src={qrImageUrl} alt="QR Payment" className="checkout-qr-image" />
             ) : null}
             <p className="checkout-qr-ref">รหัสอ้างอิง: {qrReference || "-"}</p>
-            <button type="button" className="checkout-confirm-btn" onClick={() => setShowQrModal(false)}>
+            <button type="button" className="checkout-confirm-btn" onClick={closeQrModal}>
               ปิด
             </button>
+          </div>
+        </div>
+      )}
+
+      {pendingRemoveItem && (
+        <div className="checkout-qr-overlay" onClick={() => setPendingRemoveItem(null)}>
+          <div className="checkout-confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <h4>ต้องการลบสินค้า?</h4>
+            <p className="checkout-confirm-text">
+              {pendingRemoveItem.name ? `ลบ "${pendingRemoveItem.name}" ออกจากตะกร้าใช่ไหม` : "ยืนยันการลบสินค้าออกจากตะกร้า"}
+            </p>
+            <div className="checkout-confirm-actions">
+              <button
+                type="button"
+                className="checkout-outline-btn"
+                onClick={() => setPendingRemoveItem(null)}
+              >
+                ไม่ใช่
+              </button>
+              <button
+                type="button"
+                className="checkout-confirm-btn"
+                onClick={confirmRemoveItem}
+              >
+                ใช่
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -101,7 +101,7 @@ export default function Login() {
     }
 
     setToken(data.token);
-    navigate("/orders");
+    navigate("/");
   }
 
   async function submitStaff() {

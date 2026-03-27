@@ -2,10 +2,12 @@
   "name": "backend",
   "version": "1.0.0",
   "main": "index.js",
-"scripts": {
+  "scripts": {
     "start": "node index.js",
     "seed": "node seed.js",
-    "dev": "nodemon index.js"
+    "dev": "node index.js",
+    "dev:watch": "node --watch index.js",
+    "dev:nodemon": "nodemon index.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

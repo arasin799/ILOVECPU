@@ -17,6 +17,14 @@ const STATUS_LABEL = {
   CANCELLED: "ยกเลิก",
 };
 
+function getOrderHref(order) {
+  const status = String(order?.status || "").trim();
+  if (["PAID", "PACKING", "SHIPPED", "DELIVERED"].includes(status)) {
+    return `/orders/${order.id}/tracking`;
+  }
+  return `/orders/${order.id}`;
+}
+
 export default function YourOrders({ cart = [] }) {
   const [orders, setOrders] = useState([]);
   const [error, setError] = useState("");
@@ -147,7 +155,7 @@ export default function YourOrders({ cart = [] }) {
               {!loading && !error && orders.length > 0 && (
                 <div className="orders-table-body">
                   {orders.map((order) => (
-                    <Link to={`/orders/${order.id}`} key={order.id} className="orders-row">
+                    <Link to={getOrderHref(order)} key={order.id} className="orders-row">
                       <div className="orders-order-no">
                         <strong>#{order.id}</strong>
                         <small>{new Date(order.createdAt).toLocaleDateString()}</small>

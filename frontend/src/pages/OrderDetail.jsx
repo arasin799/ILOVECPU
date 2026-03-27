@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { useRef } from "react";
 import HomeHeader from "../components/home/HomeHeader";
 import HomeFooter from "../components/home/HomeFooter";
 import { getToken, clearToken } from "../authStore";
@@ -16,11 +17,20 @@ const STATUS_LABEL = {
   CANCELLED: "ยกเลิก",
 };
 
+const PAYMENT_METHOD_LABEL = {
+  promptpay_qr: "สแกน QR พร้อมเพย์",
+  credit_card: "บัตรเครดิต/เดบิต",
+  cod: "เก็บเงินปลายทาง",
+};
 const PAYMENT_OPTIONS = [
   { value: "promptpay_qr", label: "สแกน QR พร้อมเพย์" },
   { value: "credit_card", label: "บัตรเครดิต/เดบิต" },
   { value: "cod", label: "เก็บเงินปลายทาง" },
 ];
+
+const VAT_RATE = 0.07;
+const FREE_SHIPPING_THRESHOLD = 5000;
+const SHIPPING_FEE = 80;
 
 function getStatusClass(status) {
   if (status === "PENDING_PAYMENT") return "is-pending";
@@ -39,16 +49,29 @@ async function parseJsonSafe(res) {
   }
 }
 
+function formatCurrency(value) {
+  return Number(value || 0).toLocaleString("th-TH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export default function OrderDetail({ cart = [] }) {
   const { id } = useParams();
   const navigate = useNavigate();
+  const paymentMenuRef = useRef(null);
 
   const [order, setOrder] = useState(null);
   const [products, setProducts] = useState([]);
   const [error, setError] = useState("");
   const [updatingPaymentMethod, setUpdatingPaymentMethod] = useState(false);
   const [cancellingOrder, setCancellingOrder] = useState(false);
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [q, setQ] = useState("");
+  const [showPaymentMenu, setShowPaymentMenu] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [qrImageUrl, setQrImageUrl] = useState("");
+  const [qrReference, setQrReference] = useState("");
 
   const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
   const cartCount = useMemo(
@@ -78,7 +101,16 @@ export default function OrderDetail({ cart = [] }) {
       }
 
       const data = await parseJsonSafe(res);
+      if (res.status === 404) {
+        navigate("/orders", { replace: true });
+        return;
+      }
       if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
+
+      if (["PAID", "PACKING", "SHIPPED", "DELIVERED"].includes(String(data?.status || "").trim())) {
+        navigate(`/orders/${id}/tracking`, { replace: true });
+        return;
+      }
 
       setOrder(data);
     } catch (e) {
@@ -102,14 +134,81 @@ export default function OrderDetail({ cart = [] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const currentPaymentMethod = String(order?.paymentMethod || "promptpay_qr");
+  const itemsSubtotal = useMemo(() => {
+    if (!Array.isArray(order?.items)) return 0;
+    return order.items.reduce(
+      (sum, item) => sum + Number(item.price || 0) * Number(item.qty || 0),
+      0
+    );
+  }, [order]);
+  const computedVat = useMemo(
+    () => Math.round(itemsSubtotal * VAT_RATE * 100) / 100,
+    [itemsSubtotal]
+  );
+  const computedShipping = useMemo(() => {
+    if (itemsSubtotal === 0 || itemsSubtotal >= FREE_SHIPPING_THRESHOLD) return 0;
+    return SHIPPING_FEE;
+  }, [itemsSubtotal]);
+  const computedGrandTotal = useMemo(
+    () => itemsSubtotal + computedVat + computedShipping,
+    [itemsSubtotal, computedVat, computedShipping]
+  );
+  const payableTotal = useMemo(() => {
+    const storedTotal = Number(order?.total || 0);
+    const isLegacySubtotal =
+      itemsSubtotal > 0 && Math.abs(storedTotal - itemsSubtotal) < 0.01;
+    return isLegacySubtotal ? computedGrandTotal : storedTotal;
+  }, [order, itemsSubtotal, computedGrandTotal]);
+  const currentPaymentMethod = String(order?.paymentMethod || "promptpay_qr").trim();
+  const paymentMethodLabel =
+    PAYMENT_METHOD_LABEL[currentPaymentMethod] || "ยังไม่ได้ระบุ";
+
+  function buildQrPayload(reference, amountValue) {
+    const amount = Number(amountValue || 0).toFixed(2);
+    return `PROMPTPAY|AMOUNT:${amount}|REF:${reference}|SHOP:ILOVECPU`;
+  }
+
+  function openQrModal() {
+    const reference = String(order?.paymentCode || `ORDER-${order?.id || Date.now()}`).trim();
+    const payload = buildQrPayload(reference, payableTotal);
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(payload)}`;
+    setQrReference(reference);
+    setQrImageUrl(qrUrl);
+    setShowQrModal(true);
+  }
+
+  function closeQrModal() {
+    setShowQrModal(false);
+    setQrImageUrl("");
+    setQrReference("");
+  }
+
+  useEffect(() => {
+    if (!showPaymentMenu) return undefined;
+
+    function handleOutsideClick(event) {
+      if (!paymentMenuRef.current?.contains(event.target)) {
+        setShowPaymentMenu(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [showPaymentMenu, paymentMenuRef]);
+
+
+  useEffect(() => {
+    setShowPaymentMenu(false);
+  }, [currentPaymentMethod]);
 
   async function changePaymentMethod(nextMethod) {
     if (!isPendingPayment) return;
-    if (nextMethod === currentPaymentMethod) return;
 
     const safeMethod = String(nextMethod || "").trim();
-    if (!safeMethod) return;
+    if (!safeMethod || safeMethod === currentPaymentMethod) {
+      setShowPaymentMenu(false);
+      return;
+    }
 
     const token = getToken();
     if (!token) {
@@ -153,9 +252,7 @@ export default function OrderDetail({ cart = [] }) {
           break;
         }
 
-        if (res.status === 404 || res.status === 405) {
-          continue;
-        }
+        if (res.status === 404 || res.status === 405) continue;
 
         hasOnlyNotFound = false;
         throw new Error(data?.message || `HTTP ${res.status}`);
@@ -170,6 +267,7 @@ export default function OrderDetail({ cart = [] }) {
 
       const updatedMethod = String(data?.paymentMethod || safeMethod);
       setOrder((prev) => (prev ? { ...prev, paymentMethod: updatedMethod } : prev));
+      setShowPaymentMenu(false);
     } catch (e) {
       alert(`เปลี่ยนช่องทางชำระเงินไม่สำเร็จ: ${String(e.message || e)}`);
     } finally {
@@ -248,6 +346,47 @@ export default function OrderDetail({ cart = [] }) {
     }
   }
 
+  async function confirmPaymentCompleted() {
+    if (!isPendingPayment || confirmingPayment) return;
+
+    const token = getToken();
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    setConfirmingPayment(true);
+    try {
+      const safeCode = String(order?.paymentCode || "").trim().toUpperCase();
+      const res = await fetch(`${API_BASE}/api/my/orders/${id}/confirm-transfer-code`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ code: safeCode }),
+      });
+
+      if (res.status === 401) {
+        clearToken();
+        alert("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
+        navigate("/login");
+        return;
+      }
+
+      const data = await parseJsonSafe(res);
+      if (!res.ok) {
+        throw new Error(data?.message || `HTTP ${res.status}`);
+      }
+
+      navigate(`/orders/${id}/tracking`, { replace: true });
+    } catch (e) {
+      alert(`ยืนยันการชำระเงินไม่สำเร็จ: ${String(e.message || e)}`);
+    } finally {
+      setConfirmingPayment(false);
+    }
+  }
+
   if (error) {
     return (
       <div className="order-detail-page">
@@ -290,12 +429,12 @@ export default function OrderDetail({ cart = [] }) {
 
               <div className="order-overview-meta">
                 <p>วันที่สั่งซื้อ: {new Date(order.createdAt).toLocaleString("th-TH")}</p>
-                <p>ยอดที่ต้องชำระ: <strong>฿{Number(order.total || 0).toLocaleString()}</strong></p>
+                <p>ยอดที่ต้องชำระ (VAT 7%): <strong>฿{formatCurrency(payableTotal)}</strong></p>
               </div>
 
               {isPendingPayment ? (
                 <div className="order-pending-banner">
-                  ออเดอร์นี้อยู่ในสถานะรอชำระเงิน กรุณาเลือกช่องทางชำระเงิน
+                  ออเดอร์นี้อยู่ในสถานะรอชำระเงิน
                 </div>
               ) : order.status === "CANCELLED" ? (
                 <div className="order-cancel-banner">
@@ -308,12 +447,12 @@ export default function OrderDetail({ cart = [] }) {
               )}
 
               {isPendingPayment ? (
-                <div className="order-action-row">
+                <div className="order-action-grid">
                   <button
                     type="button"
                     className="order-cancel-btn"
                     onClick={cancelOrder}
-                    disabled={cancellingOrder}
+                    disabled={cancellingOrder || confirmingPayment}
                   >
                     {cancellingOrder ? "กำลังยกเลิก..." : "ยกเลิกคำสั่งซื้อ"}
                   </button>
@@ -323,36 +462,65 @@ export default function OrderDetail({ cart = [] }) {
 
             <article className="order-payment-card">
               <h3>เปลี่ยนช่องทางการชำระเงิน</h3>
-              <p>เลือกช่องทางที่ต้องการชำระเงินสำหรับออเดอร์นี้</p>
+              <p>เลือกช่องทางชำระเงินสำหรับคำสั่งซื้อนี้</p>
 
-              <div className="order-payment-method-list">
-                {PAYMENT_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={`order-payment-method-btn ${
-                      currentPaymentMethod === option.value ? "is-selected" : ""
-                    }`}
-                    onClick={() => changePaymentMethod(option.value)}
-                    disabled={!isPendingPayment || updatingPaymentMethod}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+              <div className="order-payment-select-wrap" ref={paymentMenuRef}>
+                <button
+                  type="button"
+                  className={`order-payment-select-trigger ${showPaymentMenu ? "is-open" : ""}`}
+                  onClick={() => {
+                    if (!isPendingPayment || updatingPaymentMethod) return;
+                    setShowPaymentMenu((prev) => !prev);
+                  }}
+                  disabled={!isPendingPayment || updatingPaymentMethod}
+                >
+                  <span className="order-payment-select-value">{paymentMethodLabel}</span>
+                  <span className="order-payment-select-arrow" aria-hidden="true" />
+                </button>
+
+                {showPaymentMenu && isPendingPayment ? (
+                  <div className="order-payment-select-menu">
+                    {PAYMENT_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`order-payment-select-option ${
+                          option.value === currentPaymentMethod ? "is-selected" : ""
+                        }`}
+                        onClick={() => changePaymentMethod(option.value)}
+                        disabled={updatingPaymentMethod}
+                      >
+                        <span>{option.label}</span>
+                        {option.value === currentPaymentMethod ? (
+                          <span className="order-payment-select-check" aria-hidden="true">✓</span>
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </div>
 
-              {currentPaymentMethod === "promptpay_qr" ? (
-                <div className="order-qr-preview-box">แสดง qr code</div>
-              ) : null}
+              <div className="order-payment-note">
+                {updatingPaymentMethod
+                  ? "กำลังอัปเดตช่องทางชำระเงิน..."
+                  : !isPendingPayment
+                    ? "คำสั่งซื้อนี้ไม่สามารถเปลี่ยนช่องทางชำระเงินได้แล้ว"
+                    : ""}
+              </div>
 
-              {!isPendingPayment ? (
-                <div className="order-slip-empty">ออเดอร์นี้ไม่สามารถเปลี่ยนช่องทางชำระเงินได้แล้ว</div>
-              ) : updatingPaymentMethod ? (
-                <div className="order-slip-empty">
-                  กำลังอัปเดตช่องทางชำระเงิน...
+              {isPendingPayment && currentPaymentMethod === "promptpay_qr" ? (
+                <div className="order-payment-qr-row">
+                  <button
+                    type="button"
+                    className="order-payment-qr-btn"
+                    onClick={openQrModal}
+                  >
+                    แสดง QR Code
+                  </button>
                 </div>
               ) : null}
             </article>
+
           </div>
 
           <aside className="order-summary-card">
@@ -387,8 +555,8 @@ export default function OrderDetail({ cart = [] }) {
             <hr />
 
             <div className="order-summary-line">
-              <span>ยอดรวม</span>
-              <strong>฿{Number(order.total || 0).toLocaleString()}</strong>
+              <span>ยอดรวม (VAT 7%)</span>
+              <strong>฿{formatCurrency(payableTotal)}</strong>
             </div>
 
             <div className="order-shipping-block">
@@ -397,9 +565,36 @@ export default function OrderDetail({ cart = [] }) {
               <p>{order.phone || "-"}</p>
               <p>{order.address || "-"}</p>
             </div>
+
+            {isPendingPayment ? (
+              <button
+                type="button"
+                className="order-payment-complete-btn order-payment-complete-btn-summary"
+                onClick={confirmPaymentCompleted}
+                disabled={confirmingPayment || cancellingOrder}
+              >
+                {confirmingPayment ? "กำลังตรวจสอบการชำระเงิน..." : "ชำระเงินแล้ว"}
+              </button>
+            ) : null}
           </aside>
         </section>
       </main>
+
+      {showQrModal ? (
+        <div className="order-qr-overlay" onClick={closeQrModal}>
+          <div className="order-qr-modal" onClick={(e) => e.stopPropagation()}>
+            <h4>สแกน QR เพื่อชำระเงิน</h4>
+            <p className="order-qr-amount">ยอดชำระ ฿{formatCurrency(payableTotal)}</p>
+            {qrImageUrl ? (
+              <img src={qrImageUrl} alt="QR Payment" className="order-qr-image" />
+            ) : null}
+            <p className="order-qr-ref">รหัสอ้างอิง: {qrReference || "-"}</p>
+            <button type="button" className="order-payment-qr-btn" onClick={closeQrModal}>
+              ปิด
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <HomeFooter />
     </div>
