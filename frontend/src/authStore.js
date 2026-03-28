@@ -43,7 +43,8 @@ export async function fetchMe() {
   const token = getToken();
   if (!token) return null;
 
-  const res = await fetch("/api/auth/me", {
+  const { API_BASE } = await import("./config.js");
+  const res = await fetch(`${API_BASE}/api/auth/me`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 

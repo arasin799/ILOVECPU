@@ -238,6 +238,15 @@ const upload = multer({
   },
 });
 
+// Implement missing image upload endpoint for StaffEditProduct form.
+app.post("/api/staff/uploads/products", requireStaff, upload.array("images", 4), (req, res) => {
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ message: "No files uploaded" });
+  }
+  const urls = req.files.map(f => `/uploads/${f.filename}`);
+  res.json({ urls });
+});
+
 // Customer auth: register a new account and return a JWT for immediate login.
 app.post("/api/auth/register", async (req, res) => {
   const {

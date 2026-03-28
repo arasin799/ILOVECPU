@@ -79,7 +79,6 @@ export default function App() {
           <Route path="/staff/account-deletions" element={<StaffAccountDeletions />} />
           <Route path="/staff/orders/payments" element={<StaffConfirmPayments />} />
           <Route path="/staff/orders/processing" element={<StaffProcessOrders />} />
-          <Route path="/staff/products/new/edit" element={<StaffEditProduct />} />
           <Route path="/staff/products/:id/edit" element={<StaffEditProduct />} />
         </Routes>
     </div>
