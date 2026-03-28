@@ -449,6 +449,7 @@
 .staff-table td {
   text-align: left;
   padding: 10px 8px;
+  color: #2b2d42;
   border-bottom: 1px solid #f0e8f6;
   vertical-align: middle;
 }
