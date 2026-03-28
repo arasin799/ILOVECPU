@@ -4,6 +4,7 @@ import { API_BASE } from "../config";
 import { clearToken, getToken } from "../authStore";
 import "../styles/staff.css";
 
+// Format deletion timestamps for display in the staff UI.
 function formatDateTime(value) {
   if (!value) return "-";
   const date = new Date(value);
@@ -11,6 +12,7 @@ function formatDateTime(value) {
   return date.toLocaleString("th-TH");
 }
 
+// Parse a response safely and detect whether it came back as HTML instead of JSON.
 async function parseResponseSafe(res) {
   const text = await res.text();
   const isHtml = /^\s*</.test(text);
@@ -26,6 +28,7 @@ async function parseResponseSafe(res) {
   }
 }
 
+// Build fallback endpoint candidates for loading account-deletion logs.
 function buildAccountDeletionEndpoints() {
   const normalizedBase = String(API_BASE || "").replace(/\/+$/, "");
   const endpoints = [
@@ -49,6 +52,7 @@ function buildAccountDeletionEndpoints() {
   return Array.from(new Set(endpoints));
 }
 
+// Staff page for reviewing deleted-account logs and related customer data.
 export default function StaffAccountDeletions() {
   const navigate = useNavigate();
   const [logs, setLogs] = useState([]);

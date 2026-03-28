@@ -4,8 +4,10 @@ import { API_BASE } from "../config";
 import { clearToken, getToken } from "../authStore";
 import "../styles/staff.css";
 
+// Maximum number of product images allowed in the edit form.
 const MAX_IMAGES = 4;
 
+// Allowed categories for backoffice product editing.
 const CATEGORY_OPTIONS = [
   "NOTEBOOK",
   "CPU",
@@ -20,6 +22,7 @@ const CATEGORY_OPTIONS = [
   "STORAGE",
 ];
 
+// Brand suggestions grouped by category to keep form choices relevant.
 const BRAND_OPTIONS_BY_CATEGORY = {
   NOTEBOOK: ["ACER", "ASUS", "DELL", "HP", "LENOVO", "MSI"],
   CPU: ["AMD", "INTEL"],
@@ -34,6 +37,7 @@ const BRAND_OPTIONS_BY_CATEGORY = {
   STORAGE: ["SAMSUNG", "WD", "CRUCIAL", "KINGSTON", "SEAGATE", "ADATA"],
 };
 
+// Spec labels used to prebuild/edit spec rows by category.
 const SPEC_LABELS_BY_CATEGORY = {
   NOTEBOOK: ["Brand", "Model", "Processor", "Graphics", "Display", "Memory", "Storage", "Weight", "Warranty"],
   CPU: ["Brand", "Socket", "Core / Thread", "Base Clock", "Boost Clock", "Cache", "TDP", "Warranty"],
@@ -49,6 +53,7 @@ const SPEC_LABELS_BY_CATEGORY = {
   DEFAULT: ["Brand", "Model", "Warranty"],
 };
 
+// Empty product form shape used before the current product is loaded.
 const INITIAL_FORM = {
   name: "",
   brand: "",
@@ -57,6 +62,7 @@ const INITIAL_FORM = {
   stock: "",
 };
 
+// Normalize stored image data into a clean list of image URLs.
 function normalizeImageUrls(imageUrls, fallbackImageUrl = "") {
   let raw = [];
 
@@ -81,6 +87,7 @@ function normalizeImageUrls(imageUrls, fallbackImageUrl = "") {
     .slice(0, MAX_IMAGES);
 }
 
+// Normalize incoming spec data into clean label/value objects.
 function normalizeSpecs(specs) {
   if (!Array.isArray(specs)) return [];
 
@@ -101,6 +108,7 @@ function normalizeSpecs(specs) {
     .filter((item) => item.label);
 }
 
+// Build the editable spec rows for the chosen category.
 function buildSpecRows(category, existingSpecs = []) {
   const normalized = normalizeSpecs(existingSpecs);
   const valueByLabel = new Map(
@@ -117,6 +125,7 @@ function buildSpecRows(category, existingSpecs = []) {
   return rows.slice(0, 20);
 }
 
+// Convert one image URL into a previewable src for the browser.
 function toPreviewSrc(url) {
   if (!url) return "";
   if (
@@ -130,6 +139,7 @@ function toPreviewSrc(url) {
   return url.startsWith("/") ? `${API_BASE}${url}` : `${API_BASE}/${url}`;
 }
 
+// Create a consistent image item object for existing URLs or newly uploaded files.
 function createImageItem({ url, file = null }) {
   return {
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -138,12 +148,14 @@ function createImageItem({ url, file = null }) {
   };
 }
 
+// Release object URLs created for local image previews.
 function revokeLocalPreview(item) {
   if (item?.file && typeof item.url === "string" && item.url.startsWith("blob:")) {
     URL.revokeObjectURL(item.url);
   }
 }
 
+// Staff product-edit page with form state, image upload handling, and save behavior.
 export default function StaffEditProduct() {
   const navigate = useNavigate();
   const { id } = useParams();

@@ -8,6 +8,7 @@ import { requestDeleteAccount } from "../accountDeletion";
 import "../styles/home.css";
 import "../styles/profile.css";
 
+// Logged-in user profile page with account data and recent order overview.
 export default function Profile({ cart = [] }) {
   const navigate = useNavigate();
 

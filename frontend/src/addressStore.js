@@ -1,8 +1,12 @@
+// localStorage key used to persist saved shipping addresses in the browser.
 const ADDRESS_KEY = "hardware_store_addresses_v1";
 
+// Clean and normalize address data before it is used or stored.
+// This guarantees a stable shape and ensures only one address is marked as default.
 function normalize(addresses) {
   if (!Array.isArray(addresses)) return [];
 
+  // Remove falsy items and coerce every field into the expected shape.
   const cleaned = addresses.filter(Boolean).map((item) => ({
     id: String(item.id || Date.now()),
     fullName: item.fullName || "",
@@ -15,6 +19,8 @@ function normalize(addresses) {
     isDefault: Boolean(item.isDefault),
   }));
 
+  // Ensure there is at most one default address.
+  // If none is marked default, the first item becomes the default one.
   let seenDefault = false;
   return cleaned.map((item, index) => {
     if (item.isDefault && !seenDefault) {
@@ -32,6 +38,7 @@ function normalize(addresses) {
   });
 }
 
+// Read saved addresses from localStorage and normalize them before returning.
 export function loadAddresses() {
   try {
     const raw = localStorage.getItem(ADDRESS_KEY) || "[]";
@@ -41,6 +48,7 @@ export function loadAddresses() {
   }
 }
 
+// Save addresses back to localStorage after normalizing them first.
 export function saveAddresses(addresses) {
   localStorage.setItem(ADDRESS_KEY, JSON.stringify(normalize(addresses)));
 }

@@ -8,6 +8,7 @@ import { requestDeleteAccount } from "../accountDeletion";
 import "../styles/home.css";
 import "../styles/profile.css";
 
+// Default shape for the shipping-address form.
 const emptyForm = {
   fullName: "",
   phone: "",
@@ -19,6 +20,7 @@ const emptyForm = {
   setAsDefault: true,
 };
 
+// Address-management page for creating, editing, and selecting saved shipping addresses.
 export default function ShippingAddresses({ cart = [] }) {
   const navigate = useNavigate();
   const [q, setQ] = useState("");

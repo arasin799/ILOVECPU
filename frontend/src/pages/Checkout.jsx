@@ -8,6 +8,7 @@ import { API_BASE } from "../config";
 import "../styles/home.css";
 import "../styles/checkout.css";
 
+// Empty shape used when creating or resetting the shipping-address form.
 const emptyAddressForm = {
   fullName: "",
   phone: "",
@@ -19,6 +20,7 @@ const emptyAddressForm = {
   setAsDefault: true,
 };
 
+// Available payment methods shown to the customer during checkout.
 const paymentOptions = [
   { value: "credit_card", label: "ผ่อนชำระผ่านบัตรเครดิต" },
   { value: "promptpay_qr", label: "สแกน QR พร้อมเพย์" },
@@ -28,12 +30,14 @@ const VAT_RATE = 0.07;
 const VAT_PERCENT_LABEL = 7;
 const MAX_STOCK_MESSAGE = "\u0e08\u0e33\u0e19\u0e27\u0e19\u0e2a\u0e39\u0e07\u0e2a\u0e38\u0e14\u0e43\u0e19\u0e2a\u0e15\u0e4a\u0e2d\u0e01";
 
+// Build one readable shipping-address string from the stored address fields.
 function buildAddressText(item) {
   if (!item) return "";
   const tail = [item.district, item.province, item.postalCode].filter(Boolean).join(" ");
   return [item.addressLine, tail].filter(Boolean).join(" ").trim();
 }
 
+// Safely parse JSON responses without crashing on non-JSON/error responses.
 async function parseJsonSafe(res) {
   try {
     return await res.json();
@@ -42,6 +46,7 @@ async function parseJsonSafe(res) {
   }
 }
 
+// Format money values for display in Thai locale.
 function formatCurrency(value) {
   return Number(value || 0).toLocaleString("th-TH", {
     minimumFractionDigits: 2,
@@ -49,6 +54,7 @@ function formatCurrency(value) {
   });
 }
 
+// Checkout page: review cart, manage addresses, choose payment method, and place the order.
 export default function Checkout({ cart, setCart }) {
   const QR_PAYMENT_METHOD = "promptpay_qr";
   const navigate = useNavigate();

@@ -7,6 +7,7 @@ import { getCategoryByKey } from "../catalogCategories";
 import "../styles/home.css";
 import "../styles/category-catalog.css";
 
+// Turn a stored image path into a usable image URL for the browser.
 function resolveImageUrl(imageUrl) {
   if (!imageUrl) return null;
   if (
@@ -20,12 +21,14 @@ function resolveImageUrl(imageUrl) {
   return imageUrl.startsWith("/") ? `${API_BASE}${imageUrl}` : `${API_BASE}/${imageUrl}`;
 }
 
+// Keep numeric filter values inside a safe min/max range.
 function clampNumber(value, min, max) {
   const num = Number(value);
   if (!Number.isFinite(num)) return min;
   return Math.min(max, Math.max(min, num));
 }
 
+// Map alternate category names into the canonical keys used by this page.
 const CATEGORY_CANONICAL_MAP = {
   LAPTOP: "NOTEBOOK",
   PROCESSOR: "CPU",
@@ -44,6 +47,7 @@ const CATEGORY_CANONICAL_MAP = {
   COOL: "COOLER",
 };
 
+// Suggested brand filters shown for each category.
 const POPULAR_BRANDS_BY_CATEGORY_KEY = {
   NOTEBOOK: ["ACER", "ASUS", "LENOVO", "HP", "MSI", "DELL"],
   CPU: ["AMD", "INTEL"],
@@ -58,6 +62,7 @@ const POPULAR_BRANDS_BY_CATEGORY_KEY = {
   MOUSE: ["LOGITECH", "RAZER", "STEELSERIES", "GLORIOUS"],
 };
 
+// Normalize category text from the URL/product data into one canonical category key.
 function normalizeCategoryValue(value) {
   const normalized = String(value || "")
     .trim()
@@ -66,10 +71,12 @@ function normalizeCategoryValue(value) {
   return CATEGORY_CANONICAL_MAP[normalized] || normalized;
 }
 
+// Normalize brand names before comparing/filtering.
 function normalizeBrandValue(value) {
   return String(value || "").trim().toUpperCase();
 }
 
+// Category landing page with search/filter/sort behavior for one catalog category.
 export default function CategoryCatalog({ cart = [] }) {
   const navigate = useNavigate();
   const { categoryKey } = useParams();

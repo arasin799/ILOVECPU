@@ -4,6 +4,7 @@ import { API_BASE } from "../config";
 import { clearToken, getToken } from "../authStore";
 import "../styles/staff.css";
 
+// Empty shape for the employee creation form.
 const initialEmployeeForm = {
   firstName: "",
   lastName: "",
@@ -13,6 +14,7 @@ const initialEmployeeForm = {
   hireDate: "",
 };
 
+// Format salary values for display in Thai locale.
 function formatSalary(value) {
   if (value === null || value === undefined || value === "") return "-";
   const amount = Number(value);
@@ -20,6 +22,7 @@ function formatSalary(value) {
   return amount.toLocaleString("th-TH");
 }
 
+// Format employee dates for the staff table.
 function formatDate(value) {
   if (!value) return "-";
   const date = new Date(value);
@@ -27,6 +30,7 @@ function formatDate(value) {
   return date.toLocaleDateString("th-TH");
 }
 
+// Parse API responses safely and detect when the backend returned HTML by mistake.
 async function parseResponseSafe(res) {
   const text = await res.text();
   const isHtml = /^\s*</.test(text);
@@ -42,6 +46,7 @@ async function parseResponseSafe(res) {
   }
 }
 
+// Build fallback endpoints for listing/creating/deleting employees.
 function buildEmployeeEndpoints() {
   const normalizedBase = String(API_BASE || "").replace(/\/+$/, "");
   const endpoints = [
@@ -65,6 +70,7 @@ function buildEmployeeEndpoints() {
   return Array.from(new Set(endpoints));
 }
 
+// Staff page for listing, creating, filtering, and deleting employee records.
 export default function StaffEmployees() {
   const navigate = useNavigate();
   const [employees, setEmployees] = useState([]);

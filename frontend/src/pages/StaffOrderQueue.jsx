@@ -4,6 +4,7 @@ import { API_BASE } from "../config";
 import { clearToken, getToken } from "../authStore";
 import "../styles/staff.css";
 
+// Human-readable labels for staff order statuses.
 const STATUS_LABEL = {
   PAID: "รอยืนยันการชำระเงิน",
   PACKING: "เตรียมจัดส่ง",
@@ -13,12 +14,14 @@ const STATUS_LABEL = {
   CANCELLED: "ยกเลิก",
 };
 
+// Human-readable labels for payment methods in the staff queue.
 const PAYMENT_METHOD_LABEL = {
   promptpay_qr: "สแกน QR พร้อมเพย์",
   credit_card: "บัตรเครดิต/เดบิต",
   cod: "เก็บเงินปลายทาง",
 };
 
+// Format money values for order totals.
 function formatCurrency(value) {
   return Number(value || 0).toLocaleString("th-TH", {
     minimumFractionDigits: 2,
@@ -26,6 +29,7 @@ function formatCurrency(value) {
   });
 }
 
+// Format order timestamps for the staff UI.
 function formatDateTime(value) {
   if (!value) return "-";
   const date = new Date(value);
@@ -33,6 +37,7 @@ function formatDateTime(value) {
   return date.toLocaleString("th-TH");
 }
 
+// Parse JSON safely for staff order endpoints.
 async function parseJsonSafe(res) {
   try {
     return await res.json();
@@ -41,6 +46,7 @@ async function parseJsonSafe(res) {
   }
 }
 
+// Build queue-specific endpoints for loading staff orders.
 function buildOrderQueueEndpoints(mode) {
   const normalizedBase = String(API_BASE || "").replace(/\/+$/, "");
   const endpoints = [
@@ -64,6 +70,7 @@ function buildOrderQueueEndpoints(mode) {
   return Array.from(new Set(endpoints)).map((base) => `${base}?queue=${mode}`);
 }
 
+// Build action endpoints for staff order actions such as confirm-payment/status updates.
 function buildOrderActionEndpoints(orderId, action) {
   const normalizedBase = String(API_BASE || "").replace(/\/+$/, "");
   const endpoints = [
@@ -87,6 +94,7 @@ function buildOrderActionEndpoints(orderId, action) {
   return Array.from(new Set(endpoints));
 }
 
+// Convert API error payloads into one readable error message.
 function normalizeApiError(data, fallback) {
   const message = String(data?.message || "").trim();
   if (!message) return fallback;
@@ -96,6 +104,7 @@ function normalizeApiError(data, fallback) {
   return message;
 }
 
+// Shared staff order queue page used by payment-confirmation and processing views.
 export default function StaffOrderQueue({ mode = "payment" }) {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);

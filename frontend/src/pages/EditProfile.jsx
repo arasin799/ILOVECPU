@@ -8,6 +8,7 @@ import { requestDeleteAccount } from "../accountDeletion";
 import "../styles/home.css";
 import "../styles/profile.css";
 
+// Default user-profile form shape before real data is loaded.
 const initialForm = {
   firstName: "",
   lastName: "",
@@ -16,6 +17,7 @@ const initialForm = {
   phone: "",
 };
 
+// Profile-edit page for viewing and updating the logged-in user's account data.
 export default function EditProfile({ cart = [] }) {
   const navigate = useNavigate();
   const [q, setQ] = useState("");

@@ -4,6 +4,7 @@ import { API_BASE } from "../config";
 import { setToken } from "../authStore";
 import "../styles/login.css";
 
+// Safely parse registration responses even when the backend returns non-JSON text.
 async function parseResponseSafe(res) {
   const text = await res.text();
   const isHtml = /^\s*</.test(text);
@@ -19,6 +20,7 @@ async function parseResponseSafe(res) {
   }
 }
 
+// Build a fallback list of registration endpoints to support multiple environments.
 function buildRegisterEndpoints() {
   const normalizedBase = String(API_BASE || "").replace(/\/+$/, "");
   const endpoints = [];
@@ -39,6 +41,7 @@ function buildRegisterEndpoints() {
   return Array.from(new Set(endpoints));
 }
 
+// Customer sign-up page.
 export default function SignUp() {
   const navigate = useNavigate();
 

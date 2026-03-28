@@ -4,6 +4,7 @@ import { API_BASE } from "../config";
 import { clearToken, getToken } from "../authStore";
 import "../styles/staff.css";
 
+// Base category list used for filtering products in the backoffice.
 const baseCategoryOptions = [
   "NOTEBOOK",
   "CPU",
@@ -18,6 +19,7 @@ const baseCategoryOptions = [
   "STORAGE",
 ];
 
+// Safely parse JSON responses from the staff product endpoints.
 async function parseJsonSafe(response) {
   try {
     return await response.json();
@@ -26,6 +28,7 @@ async function parseJsonSafe(response) {
   }
 }
 
+// Staff page for listing products, viewing stock summary, and clearing the catalog.
 export default function StaffProducts() {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);

@@ -6,6 +6,7 @@ import "../styles/home.css";
 import "../styles/product-detail.css";
 import { API_BASE } from "../config";
 
+// Resolve relative image paths into full URLs the browser can load.
 function resolveImageUrl(imageUrl) {
   if (!imageUrl) return null;
   if (
@@ -19,6 +20,7 @@ function resolveImageUrl(imageUrl) {
   return imageUrl.startsWith("/") ? `${API_BASE}${imageUrl}` : `${API_BASE}/${imageUrl}`;
 }
 
+// Normalize all product image fields into one de-duplicated image list.
 function normalizeProductImages(product) {
   if (!product) return [];
 
@@ -49,6 +51,7 @@ function normalizeProductImages(product) {
   ).slice(0, 4);
 }
 
+// Safe image renderer with a fallback placeholder when loading fails.
 function SafeProductImage({ imageUrl, alt, placeholderClassName }) {
   const resolvedSrc = useMemo(() => resolveImageUrl(imageUrl), [imageUrl]);
   const [isError, setIsError] = useState(false);
@@ -64,6 +67,7 @@ function SafeProductImage({ imageUrl, alt, placeholderClassName }) {
   return <img src={resolvedSrc} alt={alt} onError={() => setIsError(true)} />;
 }
 
+// Normalize product specs into a consistent [label, value] pair structure.
 function normalizeProductSpecs(specs) {
   if (!Array.isArray(specs)) return [];
 
@@ -78,6 +82,7 @@ function normalizeProductSpecs(specs) {
     .filter(([label, value]) => label && value);
 }
 
+// Fallback spec content shown when some categories do not provide complete spec data.
 const mockSpecsByCategory = {
   NOTEBOOK: [
     ["Brand", "ACER"],
@@ -101,12 +106,14 @@ const mockSpecsByCategory = {
   ],
 };
 
+// Empty review-summary shape used before real rating stats are loaded.
 const DEFAULT_RATING_STATS = [5, 4, 3, 2, 1].map((stars) => ({
   stars,
   count: 0,
   percent: 0,
 }));
 
+// Normalize rating distribution data into a predictable 5-to-1 star structure.
 function normalizeRatingStats(stats) {
   if (!Array.isArray(stats)) return DEFAULT_RATING_STATS;
 
@@ -127,6 +134,7 @@ function normalizeRatingStats(stats) {
   ));
 }
 
+// Convert numeric ratings into display text.
 function toStarsText(value) {
   const stars = Math.max(0, Math.min(5, Math.round(Number(value || 0))));
   return "\u2605".repeat(stars) + "\u2606".repeat(5 - stars);
@@ -134,6 +142,7 @@ function toStarsText(value) {
 
 const MAX_STOCK_MESSAGE = "\u0e08\u0e33\u0e19\u0e27\u0e19\u0e2a\u0e39\u0e07\u0e2a\u0e38\u0e14\u0e43\u0e19\u0e2a\u0e15\u0e4a\u0e2d\u0e01";
 
+// Product detail page with gallery, specs, quantity controls, cart action, and reviews.
 export default function ProductDetail({ cart = [], setCart }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -516,4 +525,3 @@ export default function ProductDetail({ cart = [], setCart }) {
     </div>
   );
 }
-

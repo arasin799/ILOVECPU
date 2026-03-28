@@ -1,29 +1,46 @@
+// Load environment variables from .env before anything else reads process.env.
 require("dotenv").config();
 
+// Express is the main HTTP server framework.
 const express = require("express");
+// cors controls which frontend origins are allowed to call this backend.
 const cors = require("cors");
+// Shared SQLite connection plus schema/bootstrap logic.
 const db = require("./db");
+// path helps build absolute paths safely across environments.
 const path = require("path");
+// multer handles multipart/form-data file uploads.
 const multer = require("multer");
+// bcrypt is used to hash and verify user passwords.
 const bcrypt = require("bcrypt");
+// jsonwebtoken creates and verifies login tokens.
 const jwt = require("jsonwebtoken");
 
+// Secret used to sign/verify JWT tokens.
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
+// Shared code that grants access to staff-only backoffice routes.
 const STAFF_BACKOFFICE_CODE =
   process.env.STAFF_BACKOFFICE_CODE || "123456";
 
+// Build a whitelist of allowed frontend origins from env.
 const CORS_ORIGINS = (process.env.CORS_ORIGINS || "http://localhost:5173")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+// Directory where uploaded files are stored.
 const UPLOADS_DIR = path.join(__dirname, "uploads");
+// Directory for built-in static product images.
 const IMAGES_DIR = path.join(__dirname, "images");
+// Reject uploads larger than 5 MB.
 const MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
+// Only accept PNG and JPEG files for image uploads.
 const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg"]);
 
+// Create the Express application instance.
 const app = express();
 
+// Enable CORS with a dynamic origin check based on the env whitelist.
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -40,18 +57,24 @@ app.use(
   })
 );
 
+// Parse incoming JSON request bodies.
 app.use(express.json());
+// Expose uploaded files under /uploads.
 app.use("/uploads", express.static(UPLOADS_DIR));
+// Expose bundled image assets under /images.
 app.use("/images", express.static(IMAGES_DIR));
 
+// Basic root route for a quick manual connectivity check.
 app.get("/", (req, res) => {
   res.send("Backend is running");
 });
 
+// Small test endpoint used by the frontend to confirm API connectivity.
 app.get("/api/test", (req, res) => {
   res.json({ message: "frontend connected to backend" });
 });
 
+// Health endpoint for uptime checks or deployment probes.
 app.get("/health", (req, res) => {
   res.status(200).json({
     ok: true,
@@ -59,6 +82,7 @@ app.get("/health", (req, res) => {
   });
 });
 
+// Normalize image URL input so the API always works with a clean array of up to 4 URLs.
 function normalizeImageUrls(input) {
   let raw = [];
 
@@ -79,6 +103,7 @@ function normalizeImageUrls(input) {
     .slice(0, 4);
 }
 
+// Normalize product specs from JSON/string/object input into a clean label/value array.
 function normalizeSpecs(input) {
   let raw = [];
 
@@ -113,6 +138,7 @@ function normalizeSpecs(input) {
     .slice(0, 20);
 }
 
+// Convert a raw product row into the shape expected by the frontend.
 function toProductDto(row) {
   if (!row) return row;
   const imageUrls = normalizeImageUrls(row.imageUrls);
@@ -126,6 +152,7 @@ function toProductDto(row) {
   };
 }
 
+// Generate a human-friendly transfer/payment code.
 function generatePaymentCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let randomPart = "";
@@ -135,6 +162,7 @@ function generatePaymentCode() {
   return `TRX${randomPart}`;
 }
 
+// Keep generating a payment code until it does not collide with an existing order.
 function getUniquePaymentCode() {
   const existsStmt = db.prepare("SELECT id FROM orders WHERE paymentCode = ? LIMIT 1");
   for (let i = 0; i < 20; i += 1) {
@@ -144,11 +172,13 @@ function getUniquePaymentCode() {
   return `TRX${Date.now().toString(36).toUpperCase()}`;
 }
 
+// Extract the bearer token from the Authorization header.
 function getBearerToken(req) {
   const auth = req.headers.authorization || "";
   return auth.startsWith("Bearer ") ? auth.slice(7) : null;
 }
 
+// Factory that creates auth middleware for normal users or staff routes.
 function createAuthMiddleware({ assignKey, requiredRole = null }) {
   return (req, res, next) => {
     const token = getBearerToken(req);
@@ -172,15 +202,18 @@ function createAuthMiddleware({ assignKey, requiredRole = null }) {
   };
 }
 
+// Require any logged-in user and attach the decoded JWT payload to req.user.
 const requireAuth = createAuthMiddleware({ assignKey: "user" });
+// Require a staff token and attach the decoded JWT payload to req.staff.
 const requireStaff = createAuthMiddleware({ assignKey: "staff", requiredRole: "staff" });
 
-// Products
+// Public product routes used by the storefront.
 app.get("/api/products", (req, res) => {
   const rows = db.prepare("SELECT * FROM products ORDER BY id DESC").all();
   res.json(rows.map(toProductDto));
 });
 
+// Return one product by id for the product detail page.
 app.get("/api/products/:id", (req, res) => {
   const id = Number(req.params.id);
   const row = db.prepare("SELECT * FROM products WHERE id = ?").get(id);
@@ -191,6 +224,8 @@ app.get("/api/products/:id", (req, res) => {
 
   res.json(toProductDto(row));
 });
+
+// Shared uploader configuration for staff product image uploads.
 const upload = multer({
   dest: UPLOADS_DIR,
   limits: { fileSize: MAX_UPLOAD_SIZE },
@@ -203,7 +238,7 @@ const upload = multer({
   },
 });
 
-// Auth
+// Customer auth: register a new account and return a JWT for immediate login.
 app.post("/api/auth/register", async (req, res) => {
   const {
     firstName = "",
@@ -246,6 +281,7 @@ app.post("/api/auth/register", async (req, res) => {
   res.json({ token });
 });
 
+// Customer auth: verify credentials and issue a fresh JWT.
 app.post("/api/auth/login", async (req, res) => {
   const { email, password } = req.body;
   const nextEmail = String(email || "").trim().toLowerCase();
@@ -273,6 +309,7 @@ app.post("/api/auth/login", async (req, res) => {
   res.json({ token });
 });
 
+// Staff auth uses a shared backoffice code instead of email/password accounts.
 function handleStaffLogin(req, res) {
   const code = String(req.body?.code || "").trim();
   if (!code) {
@@ -292,9 +329,11 @@ function handleStaffLogin(req, res) {
   res.json({ token, role: "staff" });
 }
 
+// Support both prefixed and legacy staff login URLs.
 app.post("/api/staff/login", handleStaffLogin);
 app.post("/staff/login", handleStaffLogin);
 
+// Return the current logged-in user's profile.
 app.get("/api/auth/me", requireAuth, (req, res) => {
   const me = db
     .prepare("SELECT id, email, firstName, lastName, username, phone, createdAt FROM users WHERE id = ?")
@@ -307,6 +346,7 @@ app.get("/api/auth/me", requireAuth, (req, res) => {
   res.json(me);
 });
 
+// Update the logged-in user's profile and optionally rotate their password/JWT.
 app.patch("/api/auth/me", requireAuth, async (req, res) => {
   const { firstName, lastName, username, email, phone, newPassword } = req.body || {};
   const userId = req.user.id;
@@ -361,6 +401,7 @@ app.patch("/api/auth/me", requireAuth, async (req, res) => {
   res.json({ ...updated, token });
 });
 
+// Save an account deletion log, then remove the user account in one transaction.
 app.post("/api/auth/delete-account", requireAuth, (req, res) => {
   const userId = Number(req.user?.id);
   const reason = String(req.body?.reason || "").trim();
@@ -404,6 +445,7 @@ app.post("/api/auth/delete-account", requireAuth, (req, res) => {
   return res.json({ ok: true });
 });
 
+// Staff view: list customer account deletion requests/logs.
 function handleStaffAccountDeletions(req, res) {
   const rows = db
     .prepare(
@@ -428,10 +470,12 @@ function handleStaffAccountDeletions(req, res) {
   });
 }
 
+// Keep multiple route aliases pointing at the same handler.
 app.get("/api/staff/account-deletions", requireStaff, handleStaffAccountDeletions);
 app.get("/staff/account-deletions", requireStaff, handleStaffAccountDeletions);
 app.get("/api/account-deletions", requireStaff, handleStaffAccountDeletions);
 
+// Staff view: list employee records.
 function handleStaffEmployees(req, res) {
   const rows = db
     .prepare(
@@ -452,10 +496,12 @@ function handleStaffEmployees(req, res) {
   res.json(rows);
 }
 
+// Employee list route aliases.
 app.get("/api/staff/employees", requireStaff, handleStaffEmployees);
 app.get("/staff/employees", requireStaff, handleStaffEmployees);
 app.get("/api/employees", requireStaff, handleStaffEmployees);
 
+// Validate YYYY-MM-DD text before inserting dates into the database.
 function isValidDateInput(value) {
   const text = String(value || "").trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return false;
@@ -463,6 +509,7 @@ function isValidDateInput(value) {
   return !Number.isNaN(d.getTime());
 }
 
+// Staff action: create a new employee row after validating required fields.
 function handleCreateEmployee(req, res) {
   const firstName = String(req.body?.firstName || "").trim();
   const lastName = String(req.body?.lastName || "").trim();
@@ -507,10 +554,12 @@ function handleCreateEmployee(req, res) {
   return res.status(201).json(created);
 }
 
+// Employee creation route aliases.
 app.post("/api/staff/employees", requireStaff, handleCreateEmployee);
 app.post("/staff/employees", requireStaff, handleCreateEmployee);
 app.post("/api/employees", requireStaff, handleCreateEmployee);
 
+// Staff action: delete one employee by id.
 function handleDeleteEmployee(req, res) {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) {
@@ -526,10 +575,12 @@ function handleDeleteEmployee(req, res) {
   return res.json({ ok: true });
 }
 
+// Employee delete route aliases.
 app.delete("/api/staff/employees/:id", requireStaff, handleDeleteEmployee);
 app.delete("/staff/employees/:id", requireStaff, handleDeleteEmployee);
 app.delete("/api/employees/:id", requireStaff, handleDeleteEmployee);
 
+// Staff view: list only customer accounts, excluding staff-like profiles.
 function handleStaffCustomers(req, res) {
   const rows = db
     .prepare(
@@ -553,9 +604,11 @@ function handleStaffCustomers(req, res) {
   res.json(rows);
 }
 
+// Customer list routes for staff.
 app.get("/api/staff/customers", requireStaff, handleStaffCustomers);
 app.get("/staff/customers", requireStaff, handleStaffCustomers);
 
+// Staff upload endpoint: accept up to 4 product images and return public URLs.
 app.post("/api/staff/uploads/products", requireStaff, (req, res) => {
   upload.array("images", 4)(req, res, (err) => {
     if (err) {
@@ -572,7 +625,7 @@ app.post("/api/staff/uploads/products", requireStaff, (req, res) => {
   });
 });
 
-// Staff - Product Management
+// Staff product management: list all products with full editable fields.
 app.get("/api/staff/products", requireStaff, (req, res) => {
   const rows = db
     .prepare(
@@ -582,6 +635,7 @@ app.get("/api/staff/products", requireStaff, (req, res) => {
   res.json(rows.map(toProductDto));
 });
 
+// Staff dashboard helper: compute stock totals and low-stock statistics.
 app.get("/api/staff/products/stock", requireStaff, (req, res) => {
   const rows = db
     .prepare("SELECT id, name, category, stock FROM products ORDER BY stock ASC, id DESC")
@@ -601,6 +655,7 @@ app.get("/api/staff/products/stock", requireStaff, (req, res) => {
   });
 });
 
+// Staff view: fetch one product for editing.
 app.get("/api/staff/products/:id", requireStaff, (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) {
@@ -618,6 +673,7 @@ app.get("/api/staff/products/:id", requireStaff, (req, res) => {
   res.json(toProductDto(row));
 });
 
+// Convert a joined review row into a frontend-friendly DTO.
 function toReviewDto(row) {
   return {
     id: Number(row?.id || 0),
@@ -628,6 +684,7 @@ function toReviewDto(row) {
   };
 }
 
+// Build aggregate review stats such as average rating and per-star breakdown.
 function summarizeReviews(rows) {
   const safeRows = Array.isArray(rows) ? rows : [];
   const ratingCounts = {
@@ -662,6 +719,7 @@ function summarizeReviews(rows) {
   };
 }
 
+// Public route: fetch review list plus summary metrics for one product.
 app.get("/api/products/:id/reviews", (req, res) => {
   const productId = Number(req.params.id);
   if (!Number.isInteger(productId) || productId <= 0) {
@@ -703,6 +761,7 @@ app.get("/api/products/:id/reviews", (req, res) => {
   });
 });
 
+// Authenticated users can add a review for a product.
 app.post("/api/products/:id/reviews", requireAuth, (req, res) => {
   const productId = Number(req.params.id);
   const rating = Number(req.body?.rating);
@@ -752,6 +811,7 @@ app.post("/api/products/:id/reviews", requireAuth, (req, res) => {
   return res.status(201).json(toReviewDto(created));
 });
 
+// Staff action: create a new product after validating catalog data.
 app.post("/api/staff/products", requireStaff, (req, res) => {
   const name = String(req.body?.name || "").trim();
   const brand = String(req.body?.brand || "").trim();
@@ -797,6 +857,7 @@ app.post("/api/staff/products", requireStaff, (req, res) => {
   res.status(201).json(toProductDto(created));
 });
 
+// Full catalog reset used by backoffice tools, wrapped in one transaction.
 function clearCatalogTransaction() {
   const tx = db.transaction(() => {
     const deletedOrderItems = db.prepare("DELETE FROM order_items").run().changes;
@@ -818,6 +879,7 @@ function clearCatalogTransaction() {
   return tx();
 }
 
+// Staff action: clear all products plus dependent order data.
 app.delete("/api/staff/products", requireStaff, (req, res) => {
   try {
     const result = clearCatalogTransaction();
@@ -830,6 +892,7 @@ app.delete("/api/staff/products", requireStaff, (req, res) => {
   }
 });
 
+// Staff action: update only the product fields sent in the request.
 app.patch("/api/staff/products/:id", requireStaff, (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) {
@@ -900,6 +963,7 @@ app.patch("/api/staff/products/:id", requireStaff, (req, res) => {
   res.json(toProductDto(updated));
 });
 
+// Staff action: delete one product if no database constraint blocks it.
 app.delete("/api/staff/products/:id", requireStaff, (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) {
@@ -923,7 +987,7 @@ app.delete("/api/staff/products/:id", requireStaff, (req, res) => {
   }
 });
 
-// Orders
+// Map aggregated order rows into a consistent summary object for staff UIs.
 function mapStaffOrderSummary(row) {
   return {
     id: Number(row?.id || 0),
@@ -940,6 +1004,7 @@ function mapStaffOrderSummary(row) {
   };
 }
 
+// Fetch the line items for a single order, including product display info.
 function getStaffOrderItems(orderId) {
   return db
     .prepare(
@@ -960,6 +1025,7 @@ function getStaffOrderItems(orderId) {
     .all(orderId);
 }
 
+// Staff queue view: list orders, optionally filtered by queue type.
 app.get("/api/staff/orders", requireStaff, (req, res) => {
   const queue = String(req.query?.queue || "").trim().toLowerCase();
   let whereClause = "";
@@ -1013,6 +1079,7 @@ app.get("/api/staff/orders", requireStaff, (req, res) => {
   return res.json(rows.map(mapStaffOrderSummary));
 });
 
+// Staff detail view: fetch one order plus its line items.
 app.get("/api/staff/orders/:id", requireStaff, (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) {
@@ -1030,6 +1097,7 @@ app.get("/api/staff/orders/:id", requireStaff, (req, res) => {
   });
 });
 
+// Staff action: move a PAID order into PACKING and stamp verification time.
 app.patch("/api/staff/orders/:id/confirm-payment", requireStaff, (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) {
@@ -1055,6 +1123,7 @@ app.patch("/api/staff/orders/:id/confirm-payment", requireStaff, (req, res) => {
   });
 });
 
+// Staff action: enforce allowed order-status transitions.
 app.patch("/api/staff/orders/:id/status", requireStaff, (req, res) => {
   const id = Number(req.params.id);
   const nextStatus = String(req.body?.status || "").trim().toUpperCase();
@@ -1082,6 +1151,7 @@ app.patch("/api/staff/orders/:id/status", requireStaff, (req, res) => {
   return res.json({ ok: true, status: nextStatus });
 });
 
+// Customer view: list the current user's orders.
 app.get("/api/my/orders", requireAuth, (req, res) => {
   const userId = req.user.id;
 
@@ -1092,6 +1162,7 @@ app.get("/api/my/orders", requireAuth, (req, res) => {
   res.json(rows);
 });
 
+// Customer view: fetch one of the current user's orders and lazily ensure it has a payment code.
 app.get("/api/my/orders/:id", requireAuth, (req, res) => {
   const userId = req.user.id;
   const id = Number(req.params.id);
@@ -1115,6 +1186,7 @@ app.get("/api/my/orders/:id", requireAuth, (req, res) => {
   res.json({ ...nextOrder, items });
 });
 
+// Customer checkout: create an order, insert line items, and decrease stock atomically.
 app.post("/api/orders", requireAuth, (req, res) => {
   const userId = req.user.id;
   const { customerName, phone, address, items, paymentMethod } = req.body || {};
@@ -1185,6 +1257,7 @@ app.post("/api/orders", requireAuth, (req, res) => {
   });
 });
 
+// Customer action: cancel an unpaid order and restore stock.
 function handleCancelOrder(req, res) {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) {
@@ -1224,11 +1297,13 @@ function handleCancelOrder(req, res) {
   return res.json({ ok: true, status: "CANCELLED" });
 }
 
+// Support both /api/my and older /api/orders cancel URLs.
 app.post("/api/my/orders/:id/cancel", requireAuth, handleCancelOrder);
 app.patch("/api/my/orders/:id/cancel", requireAuth, handleCancelOrder);
 app.post("/api/orders/:id/cancel", requireAuth, handleCancelOrder);
 app.patch("/api/orders/:id/cancel", requireAuth, handleCancelOrder);
 
+// Customer action: change payment method while the order is still waiting for payment.
 function handleUpdatePaymentMethod(req, res) {
   const id = Number(req.params.id);
   const paymentMethod = String(req.body?.paymentMethod || "").trim();
@@ -1256,11 +1331,13 @@ function handleUpdatePaymentMethod(req, res) {
   return res.json({ ok: true, paymentMethod });
 }
 
+// Support both /api/my and older /api/orders payment-method URLs.
 app.patch("/api/my/orders/:id/payment-method", requireAuth, handleUpdatePaymentMethod);
 app.post("/api/my/orders/:id/payment-method", requireAuth, handleUpdatePaymentMethod);
 app.patch("/api/orders/:id/payment-method", requireAuth, handleUpdatePaymentMethod);
 app.post("/api/orders/:id/payment-method", requireAuth, handleUpdatePaymentMethod);
 
+// Customer action: confirm a transfer/payment code so the order moves from pending to paid.
 app.post("/api/my/orders/:id/confirm-transfer-code", requireAuth, (req, res) => {
   const id = Number(req.params.id);
   const code = String(req.body?.code || "").trim().toUpperCase();
@@ -1308,14 +1385,17 @@ app.post("/api/my/orders/:id/confirm-transfer-code", requireAuth, (req, res) => 
   });
 });
 
+// Fallback for any unknown /api/* route so clients get JSON instead of HTML.
 app.use(/^\/api\//, (req, res) => {
   res.status(404).json({
     message: `API route not found: ${req.method} ${req.originalUrl}`,
   });
 });
 
+// Backend port with a default for local development.
 const PORT = process.env.PORT || 4000;
 
+// Start the HTTP server.
 app.listen(PORT, () => {
   console.log(`server running on ${PORT}`);
 });

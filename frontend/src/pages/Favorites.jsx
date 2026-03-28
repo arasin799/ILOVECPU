@@ -7,6 +7,7 @@ import { requestDeleteAccount } from "../accountDeletion";
 import "../styles/home.css";
 import "../styles/profile.css";
 
+// Placeholder favorites page for logged-in users.
 export default function Favorites({ cart = [] }) {
   const navigate = useNavigate();
   const [q, setQ] = useState("");

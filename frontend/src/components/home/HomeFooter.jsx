@@ -1,7 +1,11 @@
+// Footer section for the home page with branding, store info, and contact details.
 export default function HomeFooter() {
   return (
+    // id is used by the header "About us" navigation to jump here.
     <footer id="about-us" className="home-footer">
+      {/* Brand block with the logo and store description. */}
       <div className="footer-brand">
+        {/* Decorative logo container built from styled spans/divs. */}
         <div className="footer-logo-box">
           <div className="footer-logo-circuit">
             <span className="line line-1" />
@@ -12,6 +16,7 @@ export default function HomeFooter() {
             <span className="dot dot-3" />
           </div>
 
+          {/* Text part of the logo. */}
           <div className="footer-logo-text">
             <div className="footer-logo-top">
               <span className="footer-logo-i">I</span>
@@ -21,6 +26,7 @@ export default function HomeFooter() {
           </div>
         </div>
 
+        {/* Short brand/store description. */}
         <p className="footer-desc">
           ถ้าคุณชอบคอมพิวเตอร์ เราคือเพื่อนกัน iLOVECPU
           <br />
@@ -32,6 +38,7 @@ export default function HomeFooter() {
         </p>
       </div>
 
+      {/* Informational links/about column. */}
       <div className="footer-column footer-links">
         <h4>เกี่ยวกับเรา</h4>
         <p>ติดต่อเรา</p>
@@ -40,6 +47,7 @@ export default function HomeFooter() {
         <p>นโยบายความเป็นส่วนตัว</p>
       </div>
 
+      {/* Direct contact information column. */}
       <div className="footer-column footer-contact">
         <h4>ติดต่อเรา</h4>
         <p><strong>เบอร์โทรศัพท์ :</strong> xxx-xxx-xxxx</p>

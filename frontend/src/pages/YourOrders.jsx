@@ -8,6 +8,7 @@ import { requestDeleteAccount } from "../accountDeletion";
 import "../styles/home.css";
 import "../styles/profile.css";
 
+// Human-readable labels for the customer's order statuses.
 const STATUS_LABEL = {
   PENDING_PAYMENT: "รอชำระเงิน",
   PAID: "ชำระเงินแล้ว",
@@ -17,6 +18,7 @@ const STATUS_LABEL = {
   CANCELLED: "ยกเลิก",
 };
 
+// Decide whether an order should open the detail page or the tracking page.
 function getOrderHref(order) {
   const status = String(order?.status || "").trim();
   if (["PAID", "PACKING", "SHIPPED", "DELIVERED"].includes(status)) {
@@ -25,6 +27,7 @@ function getOrderHref(order) {
   return `/orders/${order.id}`;
 }
 
+// Customer page for listing all orders associated with the current account.
 export default function YourOrders({ cart = [] }) {
   const [orders, setOrders] = useState([]);
   const [error, setError] = useState("");

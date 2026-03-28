@@ -4,6 +4,7 @@ import { API_BASE } from "../config";
 import { clearToken, getToken } from "../authStore";
 import "../styles/staff.css";
 
+// Format customer creation timestamps for the staff list.
 function formatCreatedAt(value) {
   if (!value) return "-";
   const date = new Date(value);
@@ -11,6 +12,7 @@ function formatCreatedAt(value) {
   return date.toLocaleString("th-TH");
 }
 
+// Parse staff API responses safely and detect accidental HTML responses.
 async function parseResponseSafe(res) {
   const text = await res.text();
   const isHtml = /^\s*</.test(text);
@@ -24,6 +26,7 @@ async function parseResponseSafe(res) {
   }
 }
 
+// Build fallback endpoints for the staff customer list.
 function buildCustomerEndpoints() {
   const normalizedBase = String(API_BASE || "").replace(/\/+$/, "");
   const endpoints = [
@@ -34,6 +37,7 @@ function buildCustomerEndpoints() {
   return Array.from(new Set(endpoints));
 }
 
+// Staff page for browsing/searching customer accounts.
 export default function StaffCustomers() {
   const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);

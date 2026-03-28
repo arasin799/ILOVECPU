@@ -8,6 +8,7 @@ import { API_BASE } from "../config";
 import "../styles/home.css";
 import "../styles/order-detail.css";
 
+// Human-readable labels for each backend order status.
 const STATUS_LABEL = {
   PENDING_PAYMENT: "รอชำระเงิน",
   PAID: "ชำระเงินแล้ว",
@@ -17,11 +18,13 @@ const STATUS_LABEL = {
   CANCELLED: "ยกเลิก",
 };
 
+// Human-readable labels for each payment method.
 const PAYMENT_METHOD_LABEL = {
   promptpay_qr: "สแกน QR พร้อมเพย์",
   credit_card: "บัตรเครดิต/เดบิต",
   cod: "เก็บเงินปลายทาง",
 };
+// Payment-method options used when the customer changes how they want to pay.
 const PAYMENT_OPTIONS = [
   { value: "promptpay_qr", label: "สแกน QR พร้อมเพย์" },
   { value: "credit_card", label: "บัตรเครดิต/เดบิต" },
@@ -32,6 +35,7 @@ const VAT_RATE = 0.07;
 const FREE_SHIPPING_THRESHOLD = 5000;
 const SHIPPING_FEE = 80;
 
+// Map backend status values to CSS modifier classes.
 function getStatusClass(status) {
   if (status === "PENDING_PAYMENT") return "is-pending";
   if (status === "PAID") return "is-paid";
@@ -41,6 +45,7 @@ function getStatusClass(status) {
   return "";
 }
 
+// Safely parse JSON without throwing when the response body is invalid.
 async function parseJsonSafe(res) {
   try {
     return await res.json();
@@ -49,6 +54,7 @@ async function parseJsonSafe(res) {
   }
 }
 
+// Format currency values for the order summary.
 function formatCurrency(value) {
   return Number(value || 0).toLocaleString("th-TH", {
     minimumFractionDigits: 2,
@@ -56,6 +62,7 @@ function formatCurrency(value) {
   });
 }
 
+// Order detail page: inspect one order, change payment method, confirm payment, or cancel.
 export default function OrderDetail({ cart = [] }) {
   const { id } = useParams();
   const navigate = useNavigate();

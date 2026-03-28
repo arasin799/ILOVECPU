@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../config";
 import "../styles/login.css";
 
+// Eye icon shown on the password visibility toggle button.
 function EyeIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -20,6 +21,7 @@ function EyeIcon() {
   );
 }
 
+// Eye-off icon shown when the password is currently hidden.
 function EyeOffIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -42,6 +44,7 @@ function EyeOffIcon() {
   );
 }
 
+// Read API responses safely even when the backend returns plain text/HTML errors.
 async function readJsonSafely(res) {
   const text = await res.text();
   try {
@@ -51,6 +54,7 @@ async function readJsonSafely(res) {
   }
 }
 
+// Convert raw backend/network errors into user-friendly login messages.
 function normalizeErrorMessage(rawMessage, fallback) {
   const text = String(rawMessage || "").trim();
   if (!text) return fallback;
@@ -71,6 +75,7 @@ function normalizeErrorMessage(rawMessage, fallback) {
   return plain || fallback;
 }
 
+// Login page for both normal customers and staff/backoffice access.
 export default function Login() {
   const navigate = useNavigate();
   const [mode, setMode] = useState("customer");

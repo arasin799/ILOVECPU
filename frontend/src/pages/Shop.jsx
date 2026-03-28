@@ -8,6 +8,7 @@ import HomeFooter from "../components/home/HomeFooter";
 import { API_BASE } from "../config";
 import "../styles/home.css";
 
+// Brand list used by the notebook section/sidebar on the shop page.
 const notebookBrands = [
   { key: "ACER", label: "ACER", mark: "acer", className: "brand-acer", sourceBrands: ["ACER"] },
   { key: "ASUS", label: "ASUS", mark: "ASUS", className: "brand-asus", sourceBrands: ["ASUS"] },
@@ -17,6 +18,7 @@ const notebookBrands = [
   { key: "HP", label: "HP", mark: "hp", className: "brand-hp", sourceBrands: ["HP"] },
 ];
 
+// General hardware categories shown on the shop page.
 const hardwareCategories = [
   { key: "CPU", mark: "CPU", label: "ซีพียู", sourceCategories: ["CPU"] },
   { key: "MB", mark: "MB", label: "เมนบอร์ด", sourceCategories: ["MB", "MAINBOARD", "MOTHERBOARD"] },
@@ -31,6 +33,7 @@ const hardwareCategories = [
 
 const MAX_STOCK_MESSAGE = "\u0e08\u0e33\u0e19\u0e27\u0e19\u0e2a\u0e39\u0e07\u0e2a\u0e38\u0e14\u0e43\u0e19\u0e2a\u0e15\u0e4a\u0e2d\u0e01";
 
+// Main storefront home/shop page that assembles banners, sidebars, and product sections.
 export default function Shop({ cart, setCart }) {
   const location = useLocation();
   const [products, setProducts] = useState([]);

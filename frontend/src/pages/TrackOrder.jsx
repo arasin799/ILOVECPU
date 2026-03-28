@@ -9,6 +9,7 @@ import "../styles/home.css";
 import "../styles/profile.css";
 import "../styles/order-detail.css";
 
+// Labels for displaying the order payment method in the tracking page.
 const PAYMENT_METHOD_LABEL = {
   promptpay_qr: "พร้อมเพย์",
   credit_card: "บัตรเครดิต/เดบิต",
@@ -19,6 +20,7 @@ const VAT_RATE = 0.07;
 const FREE_SHIPPING_THRESHOLD = 5000;
 const SHIPPING_FEE = 80;
 
+// Format currency values for order totals and line items.
 function formatCurrency(value) {
   return Number(value || 0).toLocaleString("th-TH", {
     minimumFractionDigits: 2,
@@ -26,6 +28,7 @@ function formatCurrency(value) {
   });
 }
 
+// Parse JSON safely without crashing on invalid responses.
 async function parseJsonSafe(res) {
   try {
     return await res.json();
@@ -34,17 +37,20 @@ async function parseJsonSafe(res) {
   }
 }
 
+// Generate a tracking number when the backend does not provide one.
 function getTrackingNo(order) {
   if (order?.trackingNo) return order.trackingNo;
   return `EC-${new Date(order?.createdAt || Date.now()).getFullYear()}${String(order?.id || 0).padStart(8, "0")}`;
 }
 
+// Convert backend order status into the numeric shipping-progress step.
 function getProgressStep(status) {
   if (status === "DELIVERED") return 3;
   if (status === "SHIPPED") return 2;
   return 1;
 }
 
+// Human-readable shipping-progress label.
 function getShippingStatusLabel(status) {
   if (status === "DELIVERED") return "จัดส่งแล้ว";
   if (status === "SHIPPED") return "กำลังจัดส่ง";
@@ -52,11 +58,13 @@ function getShippingStatusLabel(status) {
   return "รอตรวจสอบ";
 }
 
+// Human-readable payment-status label.
 function getPaymentStatusLabel(status) {
   if (["PACKING", "SHIPPED", "DELIVERED", "PAID"].includes(status)) return "สำเร็จ";
   return "รอตรวจสอบ";
 }
 
+// Build a usable image URL for product thumbnails shown on the tracking page.
 function buildImageUrl(path) {
   const safePath = String(path || "").trim();
   if (!safePath) return "";
@@ -64,6 +72,7 @@ function buildImageUrl(path) {
   return safePath.startsWith("/") ? `${API_BASE}${safePath}` : `${API_BASE}/${safePath}`;
 }
 
+// Tracking page for paid/shipped orders with progress timeline and order summary.
 export default function TrackOrder({ cart = [] }) {
   const { id } = useParams();
   const navigate = useNavigate();
