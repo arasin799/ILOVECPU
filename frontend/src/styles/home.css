@@ -662,7 +662,7 @@ body {
 .shop-product-name:visited,
 .shop-thumb:hover,
 .shop-product-name:hover {
-  color: inherit;
+  color: #1f2937;
   text-decoration: none;
 }
 
