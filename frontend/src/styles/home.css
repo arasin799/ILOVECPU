@@ -456,18 +456,7 @@ body {
   }
 }
 
-@media (max-width: 480px) {
-  .home-search {
-    flex-direction: column;
-  }
-  .home-search input, .home-search-select, .home-search-btn {
-    width: 100%;
-  }
 
-  .banner-section {
-    grid-template-columns: 1fr;
-  }
-}
 
 .banner-section {
   display: grid;
@@ -1016,5 +1005,43 @@ body {
 
   .footer-logo-bottom {
     font-size: 58px;
+  }
+}
+
+/* GLOBAL MOBILE OVERRIDES (Must be at the very bottom to defeat specificity cascades) */
+@media (max-width: 760px) {
+  .section-layout {
+    grid-template-columns: 1fr !important; /* Forces Sidebar to detach from product grid */
+  }
+  
+  /* Home Search Stack */
+  .home-search {
+    flex-direction: column;
+  }
+  .home-search input, .home-search-select, .home-search-btn {
+    width: 100%;
+  }
+
+  /* Banners and Product grids stack into 1 or 2 columns based on space */
+  .banner-section {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .horizontal-product-grid {
+    /* If 2 columns is too squished at 760px (like 300px per card), set to 1fr! */
+    grid-template-columns: 1fr !important; 
+  }
+  
+  .product-grid-three {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 980px) {
+  .horizontal-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .product-grid-three {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
