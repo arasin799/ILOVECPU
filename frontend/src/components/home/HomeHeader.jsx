@@ -79,15 +79,31 @@ export default function HomeHeader({
               <option key={cat.key} value={cat.key}>{cat.label}</option>
             ))}
           </select>
-          <input
-            type="text"
-            placeholder="ค้นหาสินค้า"
-            value={q}
-            // Push each keystroke back up to the parent state.
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => {
-              // Trigger search when the user presses Enter.
-              if (e.key === "Enter") {
+          <div className="home-search-row">
+            <input
+              type="text"
+              placeholder="ค้นหาสินค้า"
+              value={q}
+              // Push each keystroke back up to the parent state.
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => {
+                // Trigger search when the user presses Enter.
+                if (e.key === "Enter") {
+                  if (searchCat) {
+                    navigate(`/categories/${searchCat}${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+                  } else if (onSearch) {
+                    onSearch();
+                  } else {
+                    navigate(q ? `/?q=${encodeURIComponent(q)}` : "/");
+                  }
+                }
+              }}
+            />
+            {/* Main search execution button. */}
+            <button 
+              type="button" 
+              className="home-search-btn" 
+              onClick={() => {
                 if (searchCat) {
                   navigate(`/categories/${searchCat}${q ? `?q=${encodeURIComponent(q)}` : ""}`);
                 } else if (onSearch) {
@@ -95,20 +111,11 @@ export default function HomeHeader({
                 } else {
                   navigate(q ? `/?q=${encodeURIComponent(q)}` : "/");
                 }
-              }
-            }}
-          />
-          <button type="button" className="home-search-btn" onClick={() => {
-            if (searchCat) {
-              navigate(`/categories/${searchCat}${q ? `?q=${encodeURIComponent(q)}` : ""}`);
-            } else if (onSearch) {
-              onSearch();
-            } else {
-              navigate(q ? `/?q=${encodeURIComponent(q)}` : "/");
-            }
-          }}>
-            ค้นหา
-          </button>
+              }}
+            >
+              ค้นหา
+            </button>
+          </div>
         </div>
 
         {/* Profile button and cart link. */}
