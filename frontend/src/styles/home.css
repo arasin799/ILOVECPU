@@ -355,37 +355,78 @@ body {
 
 /* duplicate box-shadow rule removed */
 
+/* Mobile Hamburger Toggle (hidden on desktop) */
+.mobile-menu-toggle {
+  display: none;
+  background: transparent;
+  color: #6A1B9A;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 8px;
+  margin-right: 8px;
+  line-height: 1;
+}
+
 @media (max-width: 760px) {
+  .mobile-menu-toggle {
+    display: block;
+  }
+
   .home-header-top {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
     gap: 14px;
+    padding: 14px 16px;
   }
 
+  /* Hamburger and Logo side by side */
   .home-logo-box {
-    width: 150px;
-    height: 72px;
+    width: 130px;
+    height: 60px;
+    margin-left: 0;
+    margin-right: auto; /* Push actions to the right */
   }
 
-  .logo-i,
-  .logo-love {
-    font-size: 34px;
-  }
-
-  .logo-row-bottom {
-    font-size: 42px;
-  }
+  .logo-i, .logo-love { font-size: 28px; }
+  .logo-row-bottom { font-size: 34px; }
 
   .home-header-actions {
-    justify-content: flex-start;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-right: 0;
   }
 
+  .icon-btn {
+    width: 44px; height: 44px; font-size: 20px;
+  }
+  .cart-badge {
+    height: 44px; min-width: auto; padding: 0 14px;
+  }
+
+  .home-search {
+    width: 100%;
+    order: 4; /* Move to the bottom row of flex wrap */
+    gap: 8px;
+  }
+
+  /* Hide menu by default on mobile */
   .home-header-menu {
+    display: none;
     flex-direction: column;
     align-items: flex-start;
     justify-content: flex-start;
-    gap: 8px;
-    padding: 12px 16px;
+    gap: 12px;
+    padding: 16px;
     min-height: auto;
+    background: #fdfbff;
+    border-top: 1px solid #eee;
+  }
+
+  .home-header-menu.is-open {
+    display: flex;
   }
 
   .home-header-menu-left {
@@ -395,10 +436,36 @@ body {
     gap: 8px;
   }
 
+  .home-header-menu button, .header-category-dropdown > button {
+    width: 100%;
+    text-align: left;
+    padding: 12px;
+    border-radius: 8px;
+    background: #f5eef9;
+    color: #43245f;
+  }
+
   .header-category-menu {
-    left: auto;
-    right: 0;
+    position: static;
+    width: 100%;
     transform: none;
+    box-shadow: none;
+    border: 1px dashed #d6cbdc;
+    margin-top: 8px;
+    background: transparent;
+  }
+}
+
+@media (max-width: 480px) {
+  .home-search {
+    flex-direction: column;
+  }
+  .home-search input, .home-search-select, .home-search-btn {
+    width: 100%;
+  }
+
+  .banner-section {
+    grid-template-columns: 1fr;
   }
 }
 

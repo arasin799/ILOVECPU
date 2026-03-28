@@ -17,6 +17,7 @@ export default function HomeHeader({
   // Controls visibility of the category dropdown menu.
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   const [searchCat, setSearchCat] = useState(""); // Internal search category filter
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile Hamburger menu state
 
   // Notify the parent about the chosen category, then navigate to that category page.
   function handleSelectCategory(item) {
@@ -36,6 +37,15 @@ export default function HomeHeader({
     <header className="home-header">
       {/* Top row: logo, search box, and quick access actions. */}
       <div className="home-header-top">
+        {/* Mobile menu toggle (Only visible on mobile) */}
+        <button 
+          className="mobile-menu-toggle" 
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label="Toggle menu"
+        >
+          ☰
+        </button>
+
         {/* Brand/logo block built from styled elements. */}
         <div className="home-logo-box">
           <div className="home-logo-circuit">
@@ -113,7 +123,7 @@ export default function HomeHeader({
       </div>
 
       {/* Bottom row: main navigation buttons. */}
-      <div className="home-header-menu">
+      <div className={`home-header-menu ${isMobileMenuOpen ? "is-open" : ""}`}>
         <div className="home-header-menu-left">
           <button type="button" onClick={() => navigate("/")}>หน้าแรก</button>
 
@@ -147,7 +157,7 @@ export default function HomeHeader({
         </div>
 
         {/* Navigate to the footer/about section. */}
-        <button type="button" onClick={handleGoToAbout}>เกี่ยวกับเรา</button>
+        <button type="button" onClick={() => { handleGoToAbout(); setIsMobileMenuOpen(false); }}>เกี่ยวกับเรา</button>
       </div>
     </header>
   );

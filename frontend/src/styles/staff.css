@@ -781,3 +781,9 @@
 .staff-table td.staff-empty {
   text-align: center;
 }
+
+.staff-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}

@@ -627,3 +627,10 @@
     font-size: 24px;
   }
 }
+
+@media (max-width: 480px) {
+  .profile-side-column {
+    grid-template-columns: 1fr;
+  }
+}
+
