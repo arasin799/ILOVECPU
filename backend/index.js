@@ -915,7 +915,11 @@ app.delete("/api/staff/products/:id", requireStaff, (req, res) => {
     db.prepare("DELETE FROM products WHERE id = ?").run(id);
     res.json({ ok: true });
   } catch (e) {
-    res.status(409).json({ message: "Cannot delete this product", detail: String(e.message || e) });
+    console.error("Delete product error:", e);
+    res.status(409).json({
+      message: "Cannot delete this product",
+      detail: String(e.message || e),
+    });
   }
 });
 

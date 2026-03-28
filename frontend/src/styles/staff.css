@@ -1,4 +1,4 @@
-﻿.staff-page {
+.staff-page {
   width: min(1360px, calc(100% - 32px));
   margin: 0 auto 28px;
   min-height: calc(100vh - 46px);
@@ -781,4 +781,3 @@
 .staff-table td.staff-empty {
   text-align: center;
 }
-
