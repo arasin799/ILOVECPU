@@ -424,55 +424,90 @@ export default function StaffOrderQueue({ mode = "payment" }) {
                 : () => advanceOrder(order);
 
               return (
-                <article key={order.id} className="staff-order-card">
-                  <div className="staff-order-card-head">
+                <article key={order.id} className="staff-order-card" style={{ borderLeft: isPaymentMode ? "5px solid #FCD34D" : "5px solid #10B981", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)", overflow: "hidden" }}>
+                  <div className="staff-order-card-head" style={{ borderBottom: "1px solid #eee", paddingBottom: "16px", marginBottom: "16px" }}>
                     <div>
-                      <h3>คำสั่งซื้อ #{order.id}</h3>
-                      <p>{formatDateTime(order.createdAt)}</p>
+                      <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", margin: 0, color: "#111827", letterSpacing: "-0.5px" }}>
+                        ออเดอร์ #{String(order.id).padStart(5, '0')}
+                      </h3>
+                      <p style={{ margin: "4px 0 0 0", color: "#6B7280", fontSize: "0.875rem" }}>
+                        ทำรายการเมื่อ: {formatDateTime(order.createdAt)}
+                      </p>
                     </div>
-                    <span className={`staff-order-status-badge status-${String(order.status || "").toLowerCase()}`}>
+                    <span className={`staff-order-status-badge status-${String(order.status || "").toLowerCase()}`} style={{ fontSize: "0.95rem", padding: "6px 14px" }}>
                       {STATUS_LABEL[order.status] || order.status}
                     </span>
                   </div>
 
-                  <div className="staff-order-meta-grid">
-                    <div className="staff-order-meta-block">
-                      <small>ลูกค้า</small>
-                      <strong>{order.customerName || "-"}</strong>
+                  <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", marginBottom: "20px" }}>
+                    <div style={{ flex: "1 1 250px" }}>
+                      <h4 style={{ fontSize: "0.95rem", margin: "0 0 12px 0", color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.5px" }}>ข้อมูลลูกค้าและการจัดส่ง</h4>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "10px", backgroundColor: "#f9fafb", padding: "16px", borderRadius: "8px", border: "1px solid #f3f4f6", height: "100%" }}>
+                        <div>
+                          <small style={{ color: "#9CA3AF", fontSize: "0.8rem", display: "block" }}>ชื่อลูกค้า</small>
+                          <strong style={{ fontSize: "1.15rem", color: "#6d28d9" }}>{order.customerName || "-"}</strong>
+                        </div>
+                        <div>
+                          <small style={{ color: "#9CA3AF", fontSize: "0.8rem", display: "block" }}>เบอร์โทรศัพท์</small>
+                          <strong style={{ color: "#374151" }}>{order.phone || "-"}</strong>
+                        </div>
+                        <div>
+                          <small style={{ color: "#9CA3AF", fontSize: "0.8rem", display: "block" }}>ที่อยู่จัดส่ง</small>
+                          <p style={{ margin: 0, fontWeight: 500, color: "#4B5563", fontSize: "0.95rem", lineHeight: 1.5 }}>{order.address || "-"}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="staff-order-meta-block">
-                      <small>เบอร์โทร</small>
-                      <strong>{order.phone || "-"}</strong>
-                    </div>
-                    <div className="staff-order-meta-block">
-                      <small>ช่องทางชำระเงิน</small>
-                      <strong>{paymentMethodLabel}</strong>
-                    </div>
-                    <div className="staff-order-meta-block">
-                      <small>รหัสชำระเงิน</small>
-                      <strong>{order.paymentCode || "-"}</strong>
-                    </div>
-                    <div className="staff-order-meta-block">
-                      <small>จำนวนรายการสินค้า</small>
-                      <strong>{Number(order.itemCount || 0)} รายการ</strong>
-                    </div>
-                    <div className="staff-order-meta-block">
-                      <small>ยอดรวม</small>
-                      <strong>฿{formatCurrency(order.total)}</strong>
+
+                    <div style={{ flex: "1 1 250px" }}>
+                      <h4 style={{ fontSize: "0.95rem", margin: "0 0 12px 0", color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.5px" }}>ข้อมูลการชำระเงิน</h4>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "10px", backgroundColor: "#f9fafb", padding: "16px", borderRadius: "8px", border: "1px solid #f3f4f6", height: "100%" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between" }}>
+                          <small style={{ color: "#9CA3AF" }}>วิธีชำระเงิน</small>
+                          <strong style={{ color: "#374151" }}>{paymentMethodLabel}</strong>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between" }}>
+                          <small style={{ color: "#9CA3AF" }}>รหัสอ้างอิง</small>
+                          <strong style={{ color: "#374151" }}>{order.paymentCode || "-"}</strong>
+                        </div>
+                        <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px dashed #D1D5DB", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <small style={{ color: "#4B5563", fontWeight: 600 }}>ยอดชำระทั้งหมด</small>
+                          <strong style={{ fontSize: "1.4rem", color: "#ef4444" }}>฿{formatCurrency(order.total)}</strong>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="staff-order-address">
-                    <small>ที่อยู่จัดส่ง</small>
-                    <p>{order.address || "-"}</p>
-                  </div>
+                  {Array.isArray(order.items) && order.items.length > 0 && (
+                    <div style={{ borderTop: "1px dashed #e5e7eb", paddingTop: "20px", marginBottom: "20px" }}>
+                      <h4 style={{ fontSize: "0.95rem", margin: "0 0 12px 0", color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.5px" }}>รายการสินค้า ({order.items.length} รายการ)</h4>
+                      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "8px" }}>
+                        {order.items.map((item) => (
+                          <li key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#ffffff", padding: "10px 14px", borderRadius: "6px", border: "1px solid #f3f4f6" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                              {item.imageUrl ? (
+                                <img src={item.imageUrl.startsWith("http") ? item.imageUrl : `${API_BASE}${item.imageUrl}`} alt="" style={{ width: 48, height: 48, objectFit: "contain", backgroundColor: "#fff", borderRadius: "6px", border: "1px solid #eee" }} />
+                              ) : (
+                                <div style={{ width: 48, height: 48, backgroundColor: "#e5e7eb", borderRadius: "6px" }} />
+                              )}
+                              <div>
+                                <p style={{ margin: 0, fontWeight: 600, fontSize: "0.95rem", color: "#111827" }}>{item.productName}</p>
+                                <small style={{ color: "#6B7280" }}>฿{formatCurrency(item.price)} <span style={{ color: "#d1d5db", margin: "0 4px" }}>|</span> จำนวน: {item.qty}</small>
+                              </div>
+                            </div>
+                            <strong style={{ fontSize: "1.05rem", color: "#374151" }}>฿{formatCurrency(Number(item.price) * Number(item.qty))}</strong>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
-                  <div className="staff-order-card-actions">
+                  <div className="staff-order-card-actions" style={{ borderTop: "1px solid #eee", paddingTop: "20px", display: "flex", justifyContent: "flex-end", backgroundColor: isPaymentMode ? "#FFFBEB" : "#ECFDF5", margin: "0 -24px -24px -24px", padding: "16px 24px" }}>
                     <button
                       type="button"
                       className="staff-primary-btn"
                       onClick={actionHandler}
                       disabled={actioningId === order.id}
+                      style={{ padding: "12px 32px", fontSize: "1.05rem", borderRadius: "8px", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}
                     >
                       {actioningId === order.id ? "กำลังอัปเดต..." : actionLabel}
                     </button>

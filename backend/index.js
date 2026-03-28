@@ -1239,7 +1239,12 @@ app.get("/api/staff/orders", requireStaff, (req, res) => {
     )
     .all();
 
-  return res.json(rows.map(mapStaffOrderSummary));
+  const results = rows.map((row) => ({
+    ...mapStaffOrderSummary(row),
+    items: getStaffOrderItems(row.id),
+  }));
+
+  return res.json(results);
 });
 
 // Staff detail view: fetch one order plus its line items.
