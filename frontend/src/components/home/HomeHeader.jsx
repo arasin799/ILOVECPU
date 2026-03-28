@@ -16,6 +16,7 @@ export default function HomeHeader({
   const navigate = useNavigate();
   // Controls visibility of the category dropdown menu.
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
+  const [searchCat, setSearchCat] = useState(""); // Internal search category filter
 
   // Notify the parent about the chosen category, then navigate to that category page.
   function handleSelectCategory(item) {
@@ -58,6 +59,16 @@ export default function HomeHeader({
 
         {/* Controlled search input. The state lives in the parent page/component. */}
         <div className="home-search">
+          <select 
+            className="home-search-select" 
+            value={searchCat} 
+            onChange={(e) => setSearchCat(e.target.value)}
+          >
+            <option value="">ทุกหมวดหมู่</option>
+            {HEADER_CATEGORY_ITEMS.map(cat => (
+              <option key={cat.key} value={cat.key}>{cat.label}</option>
+            ))}
+          </select>
           <input
             type="text"
             placeholder="ค้นหาสินค้า"
@@ -66,9 +77,28 @@ export default function HomeHeader({
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
               // Trigger search when the user presses Enter.
-              if (e.key === "Enter") onSearch();
+              if (e.key === "Enter") {
+                if (searchCat) {
+                  navigate(`/categories/${searchCat}${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+                } else if (onSearch) {
+                  onSearch();
+                } else {
+                  navigate(q ? `/?q=${encodeURIComponent(q)}` : "/");
+                }
+              }
             }}
           />
+          <button type="button" className="home-search-btn" onClick={() => {
+            if (searchCat) {
+              navigate(`/categories/${searchCat}${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+            } else if (onSearch) {
+              onSearch();
+            } else {
+              navigate(q ? `/?q=${encodeURIComponent(q)}` : "/");
+            }
+          }}>
+            ค้นหา
+          </button>
         </div>
 
         {/* Profile button and cart link. */}

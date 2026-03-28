@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import HomeHeader from "../components/home/HomeHeader";
 import BannerSection from "../components/home/BannerSection";
 import ProductSection from "../components/home/ProductSection";
@@ -35,6 +35,7 @@ const MAX_STOCK_MESSAGE = "\u0e08\u0e33\u0e19\u0e27\u0e19\u0e2a\u0e39\u0e07\u0e2
 
 // Main storefront home/shop page that assembles banners, sidebars, and product sections.
 export default function Shop({ cart, setCart }) {
+  const navigate = useNavigate();
   const location = useLocation();
   const [products, setProducts] = useState([]);
   const [q, setQ] = useState("");
@@ -187,6 +188,7 @@ export default function Shop({ cart, setCart }) {
             activeSideKey={activeNotebookBrand}
             onSelectSideItem={setActiveNotebookBrand}
             emptyText="ไม่มีสินค้า"
+            onViewAll={() => navigate("/categories/NOTEBOOK")}
           />
 
           <HorizontalProductSection
@@ -194,6 +196,10 @@ export default function Shop({ cart, setCart }) {
             products={latestProducts}
             onAddToCart={addToCart}
             emptyText="ไม่มีสินค้า"
+            onViewAll={() => {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              document.querySelector('.home-search input')?.focus();
+            }}
           />
 
           <HorizontalProductSection
@@ -201,6 +207,7 @@ export default function Shop({ cart, setCart }) {
             products={showAccessory}
             onAddToCart={addToCart}
             emptyText="ไม่มีสินค้า"
+            onViewAll={() => navigate("/categories/ACCESSORY")}
           />
 
           <ProductSection
@@ -212,6 +219,7 @@ export default function Shop({ cart, setCart }) {
             activeSideKey={activeHardwareCategory}
             onSelectSideItem={setActiveHardwareCategory}
             emptyText="ไม่มีสินค้า"
+            onViewAll={() => navigate(`/categories/${activeHardwareConfig.key}`)}
           />
         </>
       )}

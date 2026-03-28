@@ -7,6 +7,7 @@ export default function HorizontalProductSection({
   products = [],
   onAddToCart,
   emptyText = "ไม่มีสินค้า",
+  onViewAll,
 }) {
   return (
     // Section wrapper for this product block.
@@ -14,7 +15,7 @@ export default function HorizontalProductSection({
       {/* Section title and a placeholder CTA button. */}
       <div className="section-head">
         <h2 className="purple">{title}</h2>
-        <button type="button">ดูทั้งหมด &gt;</button>
+        <button type="button" onClick={onViewAll}>ดูทั้งหมด &gt;</button>
       </div>
 
       {/* Render products when available, otherwise show an empty-state message. */}

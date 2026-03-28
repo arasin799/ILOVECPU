@@ -163,10 +163,11 @@ body {
   width: 100%;
   display: flex;
   align-items: center;
+  gap: 12px;
 }
 
 .home-search input {
-  width: 100%;
+  flex: 1;
   height: 54px;
   border: none;
   outline: none;
@@ -175,6 +176,42 @@ body {
   font-size: 17px;
   background: #ffffff;
   color: #222;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+}
+
+.home-search-select {
+  height: 54px;
+  border: none;
+  outline: none;
+  border-radius: 999px;
+  padding: 0 22px;
+  font-size: 16px;
+  font-family: inherit;
+  font-weight: 600;
+  background: #ffffff;
+  color: #6A1B9A;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  appearance: none;
+}
+
+.home-search-btn {
+  height: 54px;
+  padding: 0 26px;
+  border: none;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #6A1B9A;
+  font-size: 17px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.home-search-btn:hover {
+  background: #f1ebf6;
+  transform: translateY(-2px);
 }
 
 .home-header-actions {
@@ -316,9 +353,7 @@ body {
   background: #f1ebf6;
 }
 
-.home-search input {
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
-}
+/* duplicate box-shadow rule removed */
 
 @media (max-width: 760px) {
   .home-header-top {

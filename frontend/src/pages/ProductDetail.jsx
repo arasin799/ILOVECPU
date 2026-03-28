@@ -441,7 +441,6 @@ export default function ProductDetail({ cart = [], setCart }) {
         <div className="section-shell">
           <div className="review-header">
             <h2>รีวิว</h2>
-            <button type="button">ดูทั้งหมด &gt;</button>
           </div>
 
           <div className="review-layout">
@@ -495,7 +494,7 @@ export default function ProductDetail({ cart = [], setCart }) {
         <div className="section-shell">
           <div className="review-header">
             <h2>จากหมวดหมู่เดียวกัน</h2>
-            <button type="button">ดูทั้งหมด &gt;</button>
+            <button type="button" onClick={() => navigate(`/categories/${encodeURIComponent(product?.category || '')}`)}>ดูทั้งหมด &gt;</button>
           </div>
 
           <div className="related-grid">

@@ -89,6 +89,15 @@ CREATE TABLE IF NOT EXISTS employees (
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS user_favorites (
+  userId INTEGER NOT NULL,
+  productId INTEGER NOT NULL,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (userId, productId),
+  FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY(productId) REFERENCES products(id) ON DELETE CASCADE
+);
+
 CREATE INDEX IF NOT EXISTS idx_products_category
 ON products(category);
 

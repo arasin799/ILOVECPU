@@ -13,6 +13,7 @@ export default function ProductSection({
   activeSideKey,
   onSelectSideItem,
   emptyText = "ไม่มีสินค้า",
+  onViewAll,
 }) {
   return (
     // Outer wrapper for the section.
@@ -31,7 +32,7 @@ export default function ProductSection({
           {/* Title row plus a placeholder action button. */}
           <div className="product-area-head">
             <h2 className="section-accent-title">{accentTitle}</h2>
-            <button type="button">ดูทั้งหมด &gt;</button>
+            <button type="button" onClick={onViewAll}>ดูทั้งหมด &gt;</button>
           </div>
 
           {/* Render product cards when data exists, otherwise show an empty state. */}
