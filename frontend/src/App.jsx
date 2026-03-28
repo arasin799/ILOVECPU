@@ -67,7 +67,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/orders" element={<YourOrders cart={cart} />} />
-          <Route path="/favorites" element={<Favorites cart={cart} />} />
+          <Route path="/favorites" element={<Favorites cart={cart} setCart={setCart} />} />
           <Route path="/orders/:id" element={<OrderDetail />} />
           <Route path="/orders/:id/tracking" element={<TrackOrder cart={cart} />} />
           <Route path="/profile" element={<Profile cart={cart} />} />

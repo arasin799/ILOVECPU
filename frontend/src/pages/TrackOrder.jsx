@@ -54,13 +54,15 @@ function getProgressStep(status) {
 function getShippingStatusLabel(status) {
   if (status === "DELIVERED") return "จัดส่งแล้ว";
   if (status === "SHIPPED") return "กำลังจัดส่ง";
-  if (status === "PACKING" || status === "PAID") return "รอดำเนินการ";
+  if (status === "PACKING") return "กำลังเตรียมพัสดุ (ชำระเงินแล้ว)";
+  if (status === "PAID") return "รอแอดมินตรวจสอบ";
   return "รอตรวจสอบ";
 }
 
 // Human-readable payment-status label.
 function getPaymentStatusLabel(status) {
-  if (["PACKING", "SHIPPED", "DELIVERED", "PAID"].includes(status)) return "สำเร็จ";
+  if (["PACKING", "SHIPPED", "DELIVERED"].includes(status)) return "ตรวจสอบแล้ว (สำเร็จ)";
+  if (status === "PAID") return "รอตรวจสอบสลิป/ยอดชำระโดยแอดมิน";
   return "รอตรวจสอบ";
 }
 

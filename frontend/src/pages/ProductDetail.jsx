@@ -5,6 +5,7 @@ import HomeFooter from "../components/home/HomeFooter";
 import "../styles/home.css";
 import "../styles/product-detail.css";
 import { API_BASE } from "../config";
+import { getToken } from "../authStore";
 
 // Resolve relative image paths into full URLs the browser can load.
 function resolveImageUrl(imageUrl) {
@@ -159,6 +160,11 @@ export default function ProductDetail({ cart = [], setCart }) {
     totalReviews: 0,
     ratingStats: DEFAULT_RATING_STATS,
   });
+  
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [canReview, setCanReview] = useState(false);
+  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
+  const [reviewLoading, setReviewLoading] = useState(false);
 
   const stockLimit = useMemo(() => {
     const stockRaw = Number(product?.stock);
@@ -197,7 +203,33 @@ export default function ProductDetail({ cart = [], setCart }) {
       }
     }
 
+    async function loadUserStates() {
+      const token = getToken();
+      if (!token) return;
+
+      try {
+        const favRes = await fetch(`${API_BASE}/api/favorites/ids`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (favRes.ok) {
+          const favoriteIds = await favRes.json();
+          setIsFavorite(favoriteIds.includes(Number(id)));
+        }
+
+        const canRes = await fetch(`${API_BASE}/api/products/${id}/can-review`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (canRes.ok) {
+          const body = await canRes.json();
+          setCanReview(body.canReview);
+        }
+      } catch (e) {
+        console.error("Failed to load user states for product", e);
+      }
+    }
+
     loadData();
+    loadUserStates();
   }, [id]);
 
   const cartCount = useMemo(
@@ -297,6 +329,70 @@ export default function ProductDetail({ cart = [], setCart }) {
     navigate("/checkout");
   }
 
+  async function toggleFavorite() {
+    const token = getToken();
+    if (!token) {
+      alert("กรุณาล็อกอินก่อนเพิ่มรายการโปรด");
+      navigate("/login");
+      return;
+    }
+
+    const nextState = !isFavorite;
+    setIsFavorite(nextState);
+
+    try {
+      await fetch(`${API_BASE}/api/favorites/${id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ liked: nextState }),
+      });
+    } catch (err) {
+      setIsFavorite(!nextState); // Rollback
+    }
+  }
+
+  async function submitReview(e) {
+    e.preventDefault();
+    const token = getToken();
+    if (!token) return;
+
+    setReviewLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/products/${id}/reviews`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(reviewForm),
+      });
+      if (res.ok) {
+        alert("ขอบคุณสำหรับรีวิวของคุณ!");
+        setCanReview(false);
+        // Reload reviews
+        const reviewsRes = await fetch(`${API_BASE}/api/products/${id}/reviews`);
+        if (reviewsRes.ok) {
+          const reviewsData = await reviewsRes.json();
+          setReviews(Array.isArray(reviewsData?.reviews) ? reviewsData.reviews : []);
+          if (reviewsData.averageRating !== undefined) {
+             setReviewSummary({
+               averageRating: Number(reviewsData.averageRating),
+               totalReviews: Number(reviewsData.totalReviews),
+               ratingStats: reviewsData.ratingStats || [],
+             });
+          }
+        }
+      }
+    } catch (err) {
+      alert("เกิดข้อผิดพลาดในการส่งรีวิว");
+    } finally {
+      setReviewLoading(false);
+    }
+  }
+
   function goBack() {
     if (window.history.length > 1) {
       navigate(-1);
@@ -371,10 +467,25 @@ export default function ProductDetail({ cart = [], setCart }) {
             <Link to="/">หน้าแรก</Link> / <span>{product.category}</span>
           </p>
 
-          <h1 className="detail-title">{product.name}</h1>
-          <p className="detail-meta">
-            แบรนด์: <b>{product.brand}</b> | รหัสสินค้า: SKU-{product.id}
-          </p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+            <div>
+              <h1 className="detail-title" style={{ margin: 0 }}>{product.name}</h1>
+              <p className="detail-meta" style={{ marginTop: 8 }}>
+                แบรนด์: <b>{product.brand}</b> | รหัสสินค้า: SKU-{product.id}
+              </p>
+            </div>
+            <button 
+              type="button" 
+              onClick={toggleFavorite}
+              title={isFavorite ? "เลิกถูกใจ" : "ถูกใจสินค้า"}
+              style={{
+                background: "transparent", border: "none", fontSize: 32, cursor: "pointer", 
+                color: isFavorite ? "#e91e63" : "#ccc", padding: 0
+              }}
+            >
+              {isFavorite ? "♥" : "♡"}
+            </button>
+          </div>
 
           <div className="detail-divider" />
 
@@ -446,7 +557,7 @@ export default function ProductDetail({ cart = [], setCart }) {
           <div className="review-layout">
             <div className="review-summary-card">
               <div className="review-score">{reviewSummary.averageRating.toFixed(1)}</div>
-              <div className="review-stars">{toStarsText(reviewSummary.averageRating)}</div>
+              <div className="review-stars">{toStarsText(Math.round(reviewSummary.averageRating))}</div>
               <div className="review-count">({reviewSummary.totalReviews})</div>
 
               {reviewSummary.ratingStats.map((item) => (
@@ -484,6 +595,44 @@ export default function ProductDetail({ cart = [], setCart }) {
                     <div className="review-item-stars">{toStarsText(review.stars)}</div>
                   </div>
                 ))
+              )}
+              
+              {canReview && (
+                <form onSubmit={submitReview} style={{ marginTop: 32, padding: 24, background: "#f8f9fa", borderRadius: 12 }}>
+                  <h3 style={{ margin: "0 0 16px" }}>เขียนรีวิวของคุณ</h3>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>ให้คะแนนสินค้านี้</label>
+                    <select 
+                      value={reviewForm.rating} 
+                      onChange={e => setReviewForm(prev => ({ ...prev, rating: Number(e.target.value) }))}
+                      style={{ padding: 8, borderRadius: 6, border: "1px solid #ccc" }}
+                    >
+                      <option value={5}>5 ดาว (ดีเยี่ยม)</option>
+                      <option value={4}>4 ดาว (ดีมาก)</option>
+                      <option value={3}>3 ดาว (ปานกลาง)</option>
+                      <option value={2}>2 ดาว (พอใช้)</option>
+                      <option value={1}>1 ดาว (แย่)</option>
+                    </select>
+                  </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>ความคิดเห็น</label>
+                    <textarea 
+                      required
+                      rows={4} 
+                      placeholder="บอกความรู้สึกหรือข้อดี-ข้อเสียของสินค้านี้..."
+                      style={{ width: "100%", padding: 12, borderRadius: 6, border: "1px solid #ccc", boxSizing: "border-box" }}
+                      value={reviewForm.comment}
+                      onChange={e => setReviewForm(prev => ({ ...prev, comment: e.target.value }))}
+                    />
+                  </div>
+                  <button 
+                    type="submit" 
+                    disabled={reviewLoading}
+                    style={{ background: "#6A1B9A", color: "#fff", padding: "10px 24px", border: "none", borderRadius: 6, cursor: reviewLoading ? "not-allowed" : "pointer", fontWeight: 600 }}
+                  >
+                    {reviewLoading ? "กำลังบันทึก..." : "ส่งรีวิว"}
+                  </button>
+                </form>
               )}
             </div>
           </div>

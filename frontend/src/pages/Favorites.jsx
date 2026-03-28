@@ -4,14 +4,18 @@ import HomeHeader from "../components/home/HomeHeader";
 import HomeFooter from "../components/home/HomeFooter";
 import { getToken, clearToken } from "../authStore";
 import { requestDeleteAccount } from "../accountDeletion";
+import { API_BASE } from "../config";
+import ProductCard from "../components/home/ProductCard";
 import "../styles/home.css";
 import "../styles/profile.css";
 
-// Placeholder favorites page for logged-in users.
-export default function Favorites({ cart = [] }) {
+// Favorites page for logged-in users.
+export default function Favorites({ cart = [], setCart }) {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [ready, setReady] = useState(false);
+  const [favorites, setFavorites] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const cartCount = useMemo(
     () => cart.reduce((sum, item) => sum + item.qty, 0),
@@ -19,11 +23,26 @@ export default function Favorites({ cart = [] }) {
   );
 
   useEffect(() => {
-    if (!getToken()) {
-      navigate("/login");
-      return;
+    async function loadFavorites() {
+      if (!getToken()) {
+        navigate("/login");
+        return;
+      }
+      setReady(true);
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/favorites`, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        });
+        const data = await res.json();
+        setFavorites(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error("Failed to load favorites", e);
+      } finally {
+        setLoading(false);
+      }
     }
-    setReady(true);
+    loadFavorites();
   }, [navigate]);
 
   if (!ready) return null;
@@ -35,6 +54,25 @@ export default function Favorites({ cart = [] }) {
 
   async function handleDeleteAccount() {
     await requestDeleteAccount({ navigate });
+  }
+
+  function addToCart(p) {
+    if (!setCart) return;
+    const stockLimit = Number.isFinite(Number(p.stock)) ? Math.max(0, Math.floor(Number(p.stock))) : null;
+
+    setCart((prev) => {
+      const idx = prev.findIndex((x) => x.productId === p.id);
+      const currentQty = idx >= 0 ? prev[idx].qty : 0;
+      if (stockLimit !== null && currentQty >= stockLimit) return prev;
+      const nextQty = stockLimit === null ? currentQty + 1 : Math.min(stockLimit, currentQty + 1);
+
+      if (idx >= 0) {
+        const clone = [...prev];
+        clone[idx] = { ...clone[idx], qty: nextQty };
+        return clone;
+      }
+      return [...prev, { productId: p.id, productDetails: p, qty: 1 }];
+    });
   }
 
   return (
@@ -75,9 +113,23 @@ export default function Favorites({ cart = [] }) {
               </div>
             </div>
 
-            <div className="address-empty-card">
-              ยังไม่มีสินค้าที่ถูกใจ
-            </div>
+            {loading ? (
+              <div style={{ padding: 40, textAlign: 'center' }}>กำลังโหลด...</div>
+            ) : favorites.length === 0 ? (
+              <div className="address-empty-card">
+                ยังไม่มีสินค้าที่ถูกใจ
+              </div>
+            ) : (
+              <div className="product-grid-three" style={{ marginTop: 20 }}>
+                {favorites.map((prod) => (
+                  <ProductCard
+                    key={prod.id}
+                    product={prod}
+                    onAdd={() => addToCart(prod)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </section>
       </main>

@@ -225,6 +225,160 @@ app.get("/api/products/:id", (req, res) => {
   res.json(toProductDto(row));
 });
 
+// --- REVIEWS ---
+// Return all reviews for a product.
+app.get("/api/products/:id/reviews", (req, res) => {
+  const productId = Number(req.params.id);
+  try {
+    const rows = db.prepare(`
+      SELECT r.*, u.firstName, u.lastName 
+      FROM product_reviews r
+      LEFT JOIN users u ON r.userId = u.id
+      WHERE r.productId = ?
+      ORDER BY r.createdAt DESC
+    `).all(productId);
+
+    const statsMap = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    let totalRating = 0;
+    
+    const formattedReviews = rows.map(r => {
+      statsMap[r.rating] = (statsMap[r.rating] || 0) + 1;
+      totalRating += r.rating;
+      return {
+        id: r.id,
+        stars: r.rating,
+        text: r.comment,
+        name: r.firstName ? `${r.firstName} ${r.lastName || ''}`.trim() : "ผู้ใช้งาน",
+        createdAt: r.createdAt
+      };
+    });
+
+    const totalReviews = rows.length;
+    const averageRating = totalReviews > 0 ? +(totalRating / totalReviews).toFixed(1) : 0;
+    
+    const ratingStats = [5, 4, 3, 2, 1].map(stars => ({
+      stars,
+      count: statsMap[stars],
+      percent: totalReviews > 0 ? Math.round((statsMap[stars] / totalReviews) * 100) : 0
+    }));
+
+    res.json({
+      reviews: formattedReviews,
+      totalReviews,
+      averageRating,
+      ratingStats
+    });
+  } catch (err) {
+    if (err.message.includes("no such table")) {
+      return res.json({ reviews: [], totalReviews: 0, averageRating: 0, ratingStats: [] });
+    }
+    throw err;
+  }
+});
+
+// Check if a user can review a product
+app.get("/api/products/:id/can-review", requireAuth, (req, res) => {
+  const productId = Number(req.params.id);
+  const userId = req.user.id;
+
+  const boughtStmt = db.prepare(`
+    SELECT 1 FROM order_items oi
+    JOIN orders o ON oi.orderId = o.id
+    WHERE o.userId = ? AND oi.productId = ?
+    LIMIT 1
+  `).get(userId, productId);
+
+  if (!boughtStmt) {
+    return res.json({ canReview: false });
+  }
+
+  const reviewedStmt = db.prepare(`
+    SELECT 1 FROM product_reviews
+    WHERE userId = ? AND productId = ?
+    LIMIT 1
+  `).get(userId, productId);
+
+  if (reviewedStmt) {
+    return res.json({ canReview: false });
+  }
+
+  res.json({ canReview: true });
+});
+
+// Post a review
+app.post("/api/products/:id/reviews", requireAuth, (req, res) => {
+  const productId = Number(req.params.id);
+  const userId = req.user.id;
+  const { rating, comment } = req.body;
+
+  if (!rating || rating < 1 || rating > 5) {
+    return res.status(400).json({ message: "Invalid rating" });
+  }
+
+  const boughtStmt = db.prepare(`
+    SELECT 1 FROM order_items oi
+    JOIN orders o ON oi.orderId = o.id
+    WHERE o.userId = ? AND oi.productId = ?
+    LIMIT 1
+  `).get(userId, productId);
+
+  if (!boughtStmt) {
+    return res.status(403).json({ message: "You must purchase this product before reviewing" });
+  }
+
+  db.prepare(`DELETE FROM product_reviews WHERE userId = ? AND productId = ?`).run(userId, productId);
+  
+  db.prepare(`
+    INSERT INTO product_reviews (productId, userId, rating, comment)
+    VALUES (?, ?, ?, ?)
+  `).run(productId, userId, rating, comment || "");
+
+  res.json({ success: true });
+});
+
+// --- FAVORITES ---
+app.post("/api/favorites/:id", requireAuth, (req, res) => {
+  const productId = Number(req.params.id);
+  const userId = req.user.id;
+  const { liked } = req.body;
+
+  try {
+    if (liked) {
+      db.prepare("INSERT OR IGNORE INTO user_favorites (userId, productId) VALUES (?, ?)").run(userId, productId);
+    } else {
+      db.prepare("DELETE FROM user_favorites WHERE userId = ? AND productId = ?").run(userId, productId);
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ message: "Favorites table might not exist yet" });
+  }
+});
+
+app.get("/api/favorites", requireAuth, (req, res) => {
+  const userId = req.user.id;
+  try {
+    const rows = db.prepare(`
+      SELECT p.* FROM products p
+      JOIN user_favorites f ON p.id = f.productId
+      WHERE f.userId = ?
+      ORDER BY f.createdAt DESC
+    `).all(userId);
+    res.json(rows.map(toProductDto));
+  } catch (err) {
+    res.json([]);
+  }
+});
+
+app.get("/api/favorites/ids", requireAuth, (req, res) => {
+  const userId = req.user.id;
+  try {
+    const rows = db.prepare('SELECT productId FROM user_favorites WHERE userId = ?').all(userId);
+    res.json(rows.map(r => r.productId));
+  } catch (err) {
+    res.json([]);
+  }
+});
+
 // Shared uploader configuration for staff product image uploads.
 const upload = multer({
   dest: UPLOADS_DIR,

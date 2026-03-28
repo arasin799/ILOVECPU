@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getToken, clearToken } from "../authStore";
 import { Link, useNavigate } from "react-router-dom";
 import HomeHeader from "../components/home/HomeHeader";
@@ -11,7 +11,7 @@ import "../styles/profile.css";
 // Human-readable labels for the customer's order statuses.
 const STATUS_LABEL = {
   PENDING_PAYMENT: "รอชำระเงิน",
-  PAID: "ชำระเงินแล้ว",
+  PAID: "รอตรวจสอบชำระเงิน",
   PACKING: "กำลังเตรียมพัสดุ",
   SHIPPED: "กำลังจัดส่ง",
   DELIVERED: "ส่งสำเร็จ",

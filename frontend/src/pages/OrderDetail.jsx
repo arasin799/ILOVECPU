@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useRef } from "react";
 import HomeHeader from "../components/home/HomeHeader";
@@ -11,7 +11,7 @@ import "../styles/order-detail.css";
 // Human-readable labels for each backend order status.
 const STATUS_LABEL = {
   PENDING_PAYMENT: "รอชำระเงิน",
-  PAID: "ชำระเงินแล้ว",
+  PAID: "รอตรวจสอบชำระเงิน",
   PACKING: "กำลังเตรียมพัสดุ",
   SHIPPED: "กำลังจัดส่ง",
   DELIVERED: "ส่งสำเร็จ",
@@ -449,7 +449,7 @@ export default function OrderDetail({ cart = [] }) {
                 </div>
               ) : (
                 <div className="order-normal-banner">
-                  ชำระเงินเสร็จแล้ว ระบบส่งออเดอร์ไปหลังบ้านเพื่อเตรียมพัสดุเรียบร้อย
+                  ระบบส่งคำสั่งซื้อของคุณไปยังหลังบ้านแล้ว กรุณารอแอดมินเข้าไปกดประทับตรารับยอด
                 </div>
               )}
 
@@ -574,14 +574,20 @@ export default function OrderDetail({ cart = [] }) {
             </div>
 
             {isPendingPayment ? (
-              <button
-                type="button"
-                className="order-payment-complete-btn order-payment-complete-btn-summary"
-                onClick={confirmPaymentCompleted}
-                disabled={confirmingPayment || cancellingOrder}
-              >
-                {confirmingPayment ? "กำลังตรวจสอบการชำระเงิน..." : "ชำระเงินแล้ว"}
-              </button>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <button
+                  type="button"
+                  className="order-payment-complete-btn order-payment-complete-btn-summary"
+                  onClick={confirmPaymentCompleted}
+                  disabled={confirmingPayment || cancellingOrder}
+                >
+                  {confirmingPayment ? "กำลังส่งข้อมูล..." : "จำลองการชำระเงิน (Mock Pay)"}
+                </button>
+                <small style={{ color: "#666", textAlign: "center", lineHeight: 1.4 }}>
+                  ระบบนี้เป็นระบบ Mock Data 
+                  <br /> เมื่อกดชำระแล้ว แอดมินต้องไปกดยืนยันด้วยตัวเองที่หลังบ้าน
+                </small>
+              </div>
             ) : null}
           </aside>
         </section>
