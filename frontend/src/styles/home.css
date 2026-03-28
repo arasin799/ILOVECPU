@@ -1014,12 +1014,33 @@ body {
     grid-template-columns: 1fr !important; /* Forces Sidebar to detach from product grid */
   }
   
-  /* Home Search Stack */
+  /* Home Search: Redesigned for mobile (wrap layout) */
   .home-search {
-    flex-direction: column;
-  }
-  .home-search input, .home-search-select, .home-search-btn {
     width: 100%;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px; /* Tighter gap */
+  }
+  
+  .home-search-select {
+    flex: 1 1 100%; /* Force onto its own row */
+    width: 100%;
+    height: 48px; /* Slightly slimmer */
+    box-sizing: border-box; /* Fix overflow */
+  }
+  
+  .home-search input {
+    flex: 1 1 60%;
+    width: auto;
+    box-sizing: border-box; /* Fix left/right overflow cutting off radius */
+    height: 48px;
+  }
+  
+  .home-search-btn {
+    flex: 0 0 auto;
+    height: 48px;
+    padding: 0 20px;
   }
 
   /* Banners and Product grids stack into 1 or 2 columns based on space */
