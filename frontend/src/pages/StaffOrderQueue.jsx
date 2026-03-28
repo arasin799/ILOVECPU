@@ -424,7 +424,7 @@ export default function StaffOrderQueue({ mode = "payment" }) {
                 : () => advanceOrder(order);
 
               return (
-                <article key={order.id} className="staff-order-card" style={{ borderLeft: isPaymentMode ? "5px solid #FCD34D" : "5px solid #10B981", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)", overflow: "hidden" }}>
+                <article key={order.id} className="staff-order-card" style={{ borderLeft: isPaymentMode ? "5px solid #FCD34D" : "5px solid #10B981", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)" }}>
                   <div className="staff-order-card-head" style={{ borderBottom: "1px solid #eee", paddingBottom: "16px", marginBottom: "16px" }}>
                     <div>
                       <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", margin: 0, color: "#111827", letterSpacing: "-0.5px" }}>
@@ -501,13 +501,13 @@ export default function StaffOrderQueue({ mode = "payment" }) {
                     </div>
                   )}
 
-                  <div className="staff-order-card-actions" style={{ borderTop: "1px solid #eee", paddingTop: "20px", display: "flex", justifyContent: "flex-end", backgroundColor: isPaymentMode ? "#FFFBEB" : "#ECFDF5", margin: "0 -24px -24px -24px", padding: "16px 24px" }}>
+                  <div className="staff-order-card-actions" style={{ borderTop: "1px solid #eee", paddingTop: "16px", marginTop: "12px", display: "flex", justifyContent: "flex-end" }}>
                     <button
                       type="button"
                       className="staff-primary-btn"
                       onClick={actionHandler}
                       disabled={actioningId === order.id}
-                      style={{ padding: "12px 32px", fontSize: "1.05rem", borderRadius: "8px", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}
+                      style={{ padding: "10px 28px", fontSize: "1rem" }}
                     >
                       {actioningId === order.id ? "กำลังอัปเดต..." : actionLabel}
                     </button>
